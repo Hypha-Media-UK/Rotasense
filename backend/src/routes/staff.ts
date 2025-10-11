@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { prisma } from '../index';
-import { daysOfWeekSchema, timeSchema, staffCategorySchema, scheduleTypeSchema, nonEmptyStringSchema, optionalPositiveIntSchema, optionalNonNegativeIntSchema, zeroStartDateIdSchema } from '../validation/schemas';
+import { daysOfWeekSchema, timeSchema, staffCategorySchema, scheduleTypeSchema, nonEmptyStringSchema, optionalPositiveIntSchema, optionalNonNegativeIntSchema, zeroStartDateIdSchema, validateShiftTimes } from '../validation/schemas';
 
 const router = express.Router();
 
@@ -28,6 +28,18 @@ const createStaffSchema = z.object({
   {
     message: "For shift cycle schedules, daysOn, daysOff, and zeroStartDateId are required"
   }
+).refine(
+  (data) => {
+    // Validate shift times if both are provided
+    if (data.defaultStartTime && data.defaultEndTime) {
+      const validation = validateShiftTimes(data.defaultStartTime, data.defaultEndTime);
+      return validation.isValid;
+    }
+    return true;
+  },
+  {
+    message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
+  }
 );
 
 const updateStaffSchema = z.object({
@@ -51,6 +63,18 @@ const updateStaffSchema = z.object({
   },
   {
     message: "For shift cycle schedules, daysOn, daysOff, and zeroStartDateId are required"
+  }
+).refine(
+  (data) => {
+    // Validate shift times if both are provided
+    if (data.defaultStartTime && data.defaultEndTime) {
+      const validation = validateShiftTimes(data.defaultStartTime, data.defaultEndTime);
+      return validation.isValid;
+    }
+    return true;
+  },
+  {
+    message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
   }
 );
 

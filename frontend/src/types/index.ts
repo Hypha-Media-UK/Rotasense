@@ -185,6 +185,8 @@ export interface StaffStatus {
   override?: DailyOverride;
   isActive: boolean;
   isAbsent: boolean;
+  isScheduled: boolean;
+  isOffDuty: boolean;
   currentLocation: string;
 }
 

@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { prisma } from '../index';
-import { daysOfWeekSchema, timeSchema, nonEmptyStringSchema } from '../validation/schemas';
+import { daysOfWeekSchema, timeSchema, nonEmptyStringSchema, validateShiftTimes } from '../validation/schemas';
 
 const router = express.Router();
 
@@ -14,9 +14,38 @@ const createServiceSchema = z.object({
   endTime: timeSchema,
   minStaff: z.number().int().min(1, 'Minimum staff must be at least 1'),
   displayOnHome: z.boolean().optional()
-});
+}).refine(
+  (data) => {
+    // Validate operational times
+    const validation = validateShiftTimes(data.startTime, data.endTime);
+    return validation.isValid;
+  },
+  {
+    message: "Invalid operational times: duration must be between 1-12 hours and start/end times cannot be the same"
+  }
+);
 
-const updateServiceSchema = createServiceSchema.partial();
+const updateServiceSchema = z.object({
+  name: nonEmptyStringSchema.optional(),
+  is24x7: z.boolean().optional(),
+  operationalDays: daysOfWeekSchema.optional(),
+  startTime: timeSchema.optional(),
+  endTime: timeSchema.optional(),
+  minStaff: z.number().int().min(1, 'Minimum staff must be at least 1').optional(),
+  displayOnHome: z.boolean().optional()
+}).refine(
+  (data) => {
+    // Validate operational times if both are provided
+    if (data.startTime && data.endTime) {
+      const validation = validateShiftTimes(data.startTime, data.endTime);
+      return validation.isValid;
+    }
+    return true;
+  },
+  {
+    message: "Invalid operational times: duration must be between 1-12 hours and start/end times cannot be the same"
+  }
+);
 
 // GET /api/services - Get all services
 router.get('/', async (req, res) => {

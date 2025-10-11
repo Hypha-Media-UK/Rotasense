@@ -42,20 +42,31 @@ export const useHomeStore = defineStore('home', () => {
   const staffStatuses = computed((): StaffStatus[] => {
     const configStore = useConfigStore()
 
-    return configStore.staff.map(staff => {
-      // Check if staff member has an override for today
-      const override = todaysOverrides.value.find(o => o.staffId === staff.id)
+    return configStore.staff
+      .filter(staff => {
+        // Only include staff who are actually scheduled to work on the selected date
+        if (staff.scheduleType === 'SHIFT_CYCLE') {
+          return calculateShiftStatus(staff, selectedDate.value)
+        } else if (staff.scheduleType === 'DAILY') {
+          return staff.contractedDays.includes(selectedDayOfWeek.value)
+        }
+        return false
+      })
+      .map(staff => {
+        // Check if staff member has an override for today
+        const override = todaysOverrides.value.find(o => o.staffId === staff.id)
 
-      // Get staff's regular allocation
-      const allocation = configStore.allocations.find(a => a.staffId === staff.id)
+        // Get staff's regular allocation
+        const allocation = configStore.allocations.find(a => a.staffId === staff.id)
 
-      // Check if staff is scheduled to work today based on their schedule type
-      let isScheduledToday = false
-      if (staff.scheduleType === 'DAILY') {
-        isScheduledToday = staff.contractedDays.includes(selectedDayOfWeek.value)
-      } else if (staff.scheduleType === 'SHIFT_CYCLE') {
-        isScheduledToday = calculateShiftStatus(staff, selectedDate.value)
-      }
+        // Check if staff is scheduled to work today based on their schedule type
+        let isScheduledToday = false
+        if (staff.scheduleType === 'DAILY') {
+          isScheduledToday = staff.contractedDays.includes(selectedDayOfWeek.value)
+        } else if (staff.scheduleType === 'SHIFT_CYCLE') {
+          // We already filtered for shift cycle staff who are on shift, so they are scheduled
+          isScheduledToday = true
+        }
 
       // Determine if staff is absent
       const isAbsent = override?.overrideType === 'ABSENCE'
@@ -78,16 +89,20 @@ export const useHomeStore = defineStore('home', () => {
         }
       }
 
-      // For shift cycle staff, show "Off Duty" if not scheduled today
-      if (staff.scheduleType === 'SHIFT_CYCLE' && !isScheduledToday && !isAbsent && !override) {
-        currentLocation = 'Off Duty (Shift Rotation)'
+
+
+      // Determine time-based status for current day
+      const isCurrentDay = isToday(selectedDate.value)
+      let timeStatus = 'scheduled' // Default for future/past dates
+
+      if (isCurrentDay && !isAbsent && currentLocation !== 'Unallocated') {
+        timeStatus = calculateTimeStatus(staff, new Date())
       }
 
-      // Check if staff is within working hours (only for current day)
-      const isWithinWorkingHours = isToday(selectedDate.value) ? isStaffWithinWorkingHours(staff, selectedDate.value) : true
-
-      // Determine if staff is active (scheduled, not absent, allocated, and within working hours if today)
-      const isActive = isScheduledToday && !isAbsent && currentLocation !== 'Unallocated' && !currentLocation.includes('Off Duty') && isWithinWorkingHours
+      // Determine final status
+      const isActive = timeStatus === 'active' && isScheduledToday && !isAbsent && currentLocation !== 'Unallocated'
+      const isScheduled = (timeStatus === 'scheduled' || !isCurrentDay) && isScheduledToday && !isAbsent && currentLocation !== 'Unallocated'
+      const isOffDuty = timeStatus === 'off-duty' && isScheduledToday && !isAbsent && currentLocation !== 'Unallocated'
 
       return {
         staff,
@@ -95,6 +110,8 @@ export const useHomeStore = defineStore('home', () => {
         override,
         isActive,
         isAbsent,
+        isScheduled,
+        isOffDuty,
         currentLocation
       }
     })
@@ -209,15 +226,7 @@ export const useHomeStore = defineStore('home', () => {
 
   // Helper function to check if staff is within working hours
   function isStaffWithinWorkingHours(staff: any, date: Date): boolean {
-    const now = new Date()
-    const currentTime = now.getHours() * 60 + now.getMinutes() // minutes since midnight
-
-    // Parse staff working hours
-    const startTime = parseTimeToMinutes(staff.defaultStartTime || '08:00')
-    const endTime = parseTimeToMinutes(staff.defaultEndTime || '20:00')
-
-    // Check if current time is within working hours
-    return currentTime >= startTime && currentTime <= endTime
+    return calculateTimeStatus(staff, new Date()) === 'active'
   }
 
   // Helper function to parse time string to minutes since midnight
@@ -226,6 +235,35 @@ export const useHomeStore = defineStore('home', () => {
     const hours = parseInt(hoursStr || '0') || 0
     const minutes = parseInt(minutesStr || '0') || 0
     return hours * 60 + minutes
+  }
+
+  // Helper function to calculate time-based status with overnight shift support
+  function calculateTimeStatus(staff: any, currentDateTime: Date): string {
+    const currentTime = currentDateTime.getHours() * 60 + currentDateTime.getMinutes()
+    const startTime = parseTimeToMinutes(staff.defaultStartTime || '08:00')
+    const endTime = parseTimeToMinutes(staff.defaultEndTime || '20:00')
+
+    // Check if this is an overnight shift (end time is less than start time)
+    const isOvernightShift = endTime < startTime
+
+    if (isOvernightShift) {
+      // For overnight shifts: active if after start time OR before end time
+      if (currentTime >= startTime || currentTime <= endTime) {
+        return 'active'
+      } else {
+        // Between end time and start time (the gap period)
+        return 'off-duty'
+      }
+    } else {
+      // Normal day shift logic
+      if (currentTime < startTime) {
+        return 'scheduled' // Before working hours
+      } else if (currentTime >= startTime && currentTime <= endTime) {
+        return 'active' // During working hours
+      } else {
+        return 'off-duty' // After working hours
+      }
+    }
   }
 
   // Actions

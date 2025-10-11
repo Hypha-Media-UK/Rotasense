@@ -9,6 +9,10 @@ export declare const daysOfWeekSchema: z.ZodArray<z.ZodEnum<{
     sunday: "sunday";
 }>>;
 export declare const timeSchema: z.ZodString;
+export declare function validateShiftTimes(startTime: string, endTime: string): {
+    isValid: boolean;
+    error?: string;
+};
 export declare const staffCategorySchema: z.ZodEnum<{
     REGULAR: "REGULAR";
     RELIEF: "RELIEF";
@@ -25,5 +29,6 @@ export declare const scheduleTypeSchema: z.ZodEnum<{
 export declare const positiveIntSchema: z.ZodNumber;
 export declare const nonEmptyStringSchema: z.ZodString;
 export declare const optionalPositiveIntSchema: z.ZodOptional<z.ZodNumber>;
+export declare const optionalNonNegativeIntSchema: z.ZodOptional<z.ZodNumber>;
 export declare const zeroStartDateIdSchema: z.ZodString;
 //# sourceMappingURL=schemas.d.ts.map

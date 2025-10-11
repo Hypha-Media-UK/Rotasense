@@ -11,13 +11,37 @@ const router = express_1.default.Router();
 // Validation schemas
 const createServiceSchema = zod_1.z.object({
     name: schemas_1.nonEmptyStringSchema.describe('Service name is required'),
+    is24x7: zod_1.z.boolean().optional(),
     operationalDays: schemas_1.daysOfWeekSchema,
     startTime: schemas_1.timeSchema,
     endTime: schemas_1.timeSchema,
     minStaff: zod_1.z.number().int().min(1, 'Minimum staff must be at least 1'),
     displayOnHome: zod_1.z.boolean().optional()
+}).refine((data) => {
+    // Validate operational times
+    const validation = (0, schemas_1.validateShiftTimes)(data.startTime, data.endTime);
+    return validation.isValid;
+}, {
+    message: "Invalid operational times: duration must be between 1-12 hours and start/end times cannot be the same"
 });
-const updateServiceSchema = createServiceSchema.partial();
+const updateServiceSchema = zod_1.z.object({
+    name: schemas_1.nonEmptyStringSchema.optional(),
+    is24x7: zod_1.z.boolean().optional(),
+    operationalDays: schemas_1.daysOfWeekSchema.optional(),
+    startTime: schemas_1.timeSchema.optional(),
+    endTime: schemas_1.timeSchema.optional(),
+    minStaff: zod_1.z.number().int().min(1, 'Minimum staff must be at least 1').optional(),
+    displayOnHome: zod_1.z.boolean().optional()
+}).refine((data) => {
+    // Validate operational times if both are provided
+    if (data.startTime && data.endTime) {
+        const validation = (0, schemas_1.validateShiftTimes)(data.startTime, data.endTime);
+        return validation.isValid;
+    }
+    return true;
+}, {
+    message: "Invalid operational times: duration must be between 1-12 hours and start/end times cannot be the same"
+});
 // GET /api/services - Get all services
 router.get('/', async (req, res) => {
     try {

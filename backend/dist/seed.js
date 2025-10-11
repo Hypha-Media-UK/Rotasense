@@ -99,12 +99,14 @@ async function main() {
                 create: {
                     name: deptName,
                     buildingId: building.id,
+                    // Make Emergency and ICU departments 24/7
+                    is24x7: deptName.includes('Emergency') || deptName.includes('ICU') || deptName.includes('Critical Care'),
                     operationalDays: JSON.stringify(['monday', 'tuesday', 'wednesday', 'thursday', 'friday']),
                     startTime: '08:00',
                     endTime: '20:00',
                     minStaff: 2,
-                    // Only show some departments by default (every 3rd department will be hidden unless it has staff)
-                    displayOnHome: i % 3 !== 2
+                    // Default to not showing on home unless it has staff
+                    displayOnHome: false
                 }
             });
         }
@@ -165,15 +167,17 @@ async function main() {
         await prisma.service.upsert({
             where: { name: service.name },
             update: {
-                displayOnHome: service.display
+                displayOnHome: false
             },
             create: {
                 name: service.name,
+                // Make Security service 24/7
+                is24x7: service.name.includes('Security'),
                 operationalDays: JSON.stringify(service.days),
                 startTime: '08:00',
                 endTime: '20:00',
                 minStaff: 1,
-                displayOnHome: service.display
+                displayOnHome: false
             }
         });
     }

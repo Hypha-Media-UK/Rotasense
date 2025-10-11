@@ -15,7 +15,7 @@ const createStaffSchema = zod_1.z.object({
     scheduleType: schemas_1.scheduleTypeSchema.optional(),
     daysOn: schemas_1.optionalPositiveIntSchema,
     daysOff: schemas_1.optionalPositiveIntSchema,
-    shiftOffset: schemas_1.optionalPositiveIntSchema,
+    shiftOffset: schemas_1.optionalNonNegativeIntSchema,
     zeroStartDateId: schemas_1.zeroStartDateIdSchema.optional(),
     defaultStartTime: schemas_1.timeSchema.optional(),
     defaultEndTime: schemas_1.timeSchema.optional(),
@@ -28,6 +28,15 @@ const createStaffSchema = zod_1.z.object({
     return true;
 }, {
     message: "For shift cycle schedules, daysOn, daysOff, and zeroStartDateId are required"
+}).refine((data) => {
+    // Validate shift times if both are provided
+    if (data.defaultStartTime && data.defaultEndTime) {
+        const validation = (0, schemas_1.validateShiftTimes)(data.defaultStartTime, data.defaultEndTime);
+        return validation.isValid;
+    }
+    return true;
+}, {
+    message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
 });
 const updateStaffSchema = zod_1.z.object({
     name: schemas_1.nonEmptyStringSchema.optional(),
@@ -35,7 +44,7 @@ const updateStaffSchema = zod_1.z.object({
     scheduleType: schemas_1.scheduleTypeSchema.optional(),
     daysOn: schemas_1.optionalPositiveIntSchema,
     daysOff: schemas_1.optionalPositiveIntSchema,
-    shiftOffset: schemas_1.optionalPositiveIntSchema,
+    shiftOffset: schemas_1.optionalNonNegativeIntSchema,
     zeroStartDateId: schemas_1.zeroStartDateIdSchema.optional(),
     defaultStartTime: schemas_1.timeSchema.optional(),
     defaultEndTime: schemas_1.timeSchema.optional(),
@@ -43,11 +52,20 @@ const updateStaffSchema = zod_1.z.object({
 }).refine((data) => {
     // If scheduleType is SHIFT_CYCLE, require shift cycle fields
     if (data.scheduleType === 'SHIFT_CYCLE') {
-        return data.daysOn && data.daysOff !== undefined && data.zeroStartDateId;
+        return data.daysOn && data.daysOff && data.zeroStartDateId;
     }
     return true;
 }, {
     message: "For shift cycle schedules, daysOn, daysOff, and zeroStartDateId are required"
+}).refine((data) => {
+    // Validate shift times if both are provided
+    if (data.defaultStartTime && data.defaultEndTime) {
+        const validation = (0, schemas_1.validateShiftTimes)(data.defaultStartTime, data.defaultEndTime);
+        return validation.isValid;
+    }
+    return true;
+}, {
+    message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
 });
 // GET /api/staff - Get all staff members
 router.get('/', async (req, res) => {

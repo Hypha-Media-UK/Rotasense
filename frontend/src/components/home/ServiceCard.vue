@@ -19,9 +19,9 @@ defineProps<Props>()
           </span>
         </div>
       </div>
-      
+
       <div class="service-status">
-        <div 
+        <div
           class="status"
           :class="{
             'status-understaffed': serviceStatus.isUnderstaffed,
@@ -32,7 +32,7 @@ defineProps<Props>()
           <span v-else-if="serviceStatus.isOperational">Operational</span>
           <span v-else>Closed</span>
         </div>
-        
+
         <div class="staffing-info">
           <span class="staffing-count">
             {{ serviceStatus.activeStaff }} / {{ serviceStatus.requiredStaff }}
@@ -51,15 +51,17 @@ defineProps<Props>()
           class="staff-item"
           :class="{
             'staff-active': staffStatus.isActive,
-            'staff-absent': staffStatus.isAbsent,
-            'staff-off-duty': !staffStatus.isActive && !staffStatus.isAbsent
+            'staff-scheduled': staffStatus.isScheduled && !staffStatus.isActive,
+            'staff-off-duty': staffStatus.isOffDuty,
+            'staff-absent': staffStatus.isAbsent
           }"
         >
           <div class="staff-name">{{ staffStatus.staff.name }}</div>
           <div class="staff-status">
-            <span v-if="staffStatus.isAbsent" class="status status-off-duty">Absent</span>
+            <span v-if="staffStatus.isAbsent" class="status status-absent">Absent</span>
             <span v-else-if="staffStatus.isActive" class="status status-active">Active</span>
-            <span v-else class="status status-off-duty">Off Duty</span>
+            <span v-else-if="staffStatus.isScheduled" class="status status-scheduled">Scheduled</span>
+            <span v-else-if="staffStatus.isOffDuty" class="status status-off-duty">Off Duty</span>
           </div>
         </div>
       </div>
@@ -168,14 +170,20 @@ defineProps<Props>()
   background-color: oklch(0.95 0.05 140);
 }
 
+.staff-item.staff-scheduled {
+  border-color: #9ca3af;
+  background-color: #f3f4f6;
+}
+
 .staff-item.staff-absent {
   border-color: var(--color-error);
   background-color: oklch(0.95 0.05 25);
 }
 
 .staff-item.staff-off-duty {
-  border-color: var(--color-warning);
-  background-color: oklch(0.95 0.05 80);
+  border-color: #e5e7eb;
+  background-color: #fafafa;
+  opacity: 0.7;
 }
 
 .staff-name {
@@ -203,27 +211,27 @@ defineProps<Props>()
     align-items: stretch;
     gap: var(--space-sm);
   }
-  
+
   .service-status {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
   }
-  
+
   .staffing-info {
     align-items: flex-start;
   }
-  
+
   .staff-item {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-xs);
   }
-  
+
   .staff-name {
     text-align: center;
   }
-  
+
   .staff-status {
     text-align: center;
   }

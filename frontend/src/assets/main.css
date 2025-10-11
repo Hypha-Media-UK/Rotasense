@@ -229,9 +229,19 @@
     color: var(--color-success);
   }
 
+  .status-scheduled {
+    background-color: #f3f4f6;
+    color: #6b7280;
+  }
+
   .status-off-duty {
-    background-color: oklch(0.9 0.1 80);
-    color: var(--color-warning);
+    background-color: #fafafa;
+    color: #9ca3af;
+  }
+
+  .status-absent {
+    background-color: oklch(0.9 0.1 25);
+    color: var(--color-error);
   }
 
   .status-understaffed {
