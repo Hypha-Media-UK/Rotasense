@@ -160,30 +160,33 @@ defineProps<Props>()
   align-items: center;
   padding: var(--space-sm);
   background-color: var(--color-background);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   transition: all 0.2s ease;
 }
 
 .staff-item.staff-active {
-  border-color: var(--color-success);
   background-color: oklch(0.95 0.05 140);
 }
 
 .staff-item.staff-scheduled {
-  border-color: #9ca3af;
   background-color: #f3f4f6;
 }
 
 .staff-item.staff-absent {
-  border-color: var(--color-error);
   background-color: oklch(0.95 0.05 25);
 }
 
 .staff-item.staff-off-duty {
-  border-color: #e5e7eb;
-  background-color: #fafafa;
+  background-color: rgba(250, 250, 250, 0.3);
   opacity: 0.7;
+}
+
+.staff-item.staff-off-duty .staff-name {
+  color: #9ca3af;
+}
+
+.staff-item.staff-active .staff-name {
+  color: var(--color-success);
 }
 
 .staff-name {
