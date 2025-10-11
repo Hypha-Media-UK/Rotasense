@@ -1,0 +1,144 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Building {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  departments Department[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("buildings")
+}
+
+model Department {
+  id               Int                @id @default(autoincrement())
+  name             String
+  buildingId       Int
+  building         Building           @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  is24x7           Boolean            @default(false) // 24/7 operation flag
+  operationalDays  String // JSON string of days: ["monday", "tuesday", ...]
+  startTime        String // "08:00"
+  endTime          String // "20:00"
+  minStaff         Int                @default(1)
+  displayOnHome    Boolean            @default(false)
+  staffAllocations StaffAllocation[]
+  dailyOverrides   DailyOverride[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@unique([name, buildingId])
+  @@map("departments")
+}
+
+model Service {
+  id               Int                @id @default(autoincrement())
+  name             String             @unique
+  is24x7           Boolean            @default(false) // 24/7 operation flag
+  operationalDays  String // JSON string of days
+  startTime        String
+  endTime          String
+  minStaff         Int                @default(1)
+  displayOnHome    Boolean            @default(false)
+  staffAllocations StaffAllocation[]
+  dailyOverrides   DailyOverride[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@map("services")
+}
+
+model Staff {
+  id               Int                @id @default(autoincrement())
+  name             String             @unique
+  category         StaffCategory      @default(REGULAR)
+
+  // Schedule configuration
+  scheduleType     ScheduleType       @default(DAILY)
+  daysOn           Int?               // For shift cycles only
+  daysOff          Int?               // For shift cycles only
+  shiftOffset      Int?               // For shift cycles only (0 = Group A, 4 = Group B, etc.)
+  zeroStartDateId  String?            // Reference to settings zero start date
+
+  // Time configuration
+  defaultStartTime String             @default("08:00")
+  defaultEndTime   String             @default("20:00")
+  contractedDays   String             // JSON string of days: ["monday", "tuesday", ...] - for DAILY schedule type
+
+  allocations      StaffAllocation[]
+  dailyOverrides   DailyOverride[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@map("staff")
+}
+
+model StaffAllocation {
+  id           Int         @id @default(autoincrement())
+  staffId      Int
+  staff        Staff       @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  serviceId    Int?
+  service      Service?    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("staff_allocations")
+}
+
+
+
+model DailyOverride {
+  id           Int         @id @default(autoincrement())
+  date         DateTime    @db.Date
+  staffId      Int
+  staff        Staff       @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  serviceId    Int?
+  service      Service?    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  overrideType OverrideType
+  startTime    String?
+  endTime      String?
+  reason       String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("daily_overrides")
+}
+
+model Settings {
+  id             Int      @id @default(autoincrement())
+  timeFormat     String   @default("24") // "12" or "24"
+  zeroStartDates String   @default("[]") // JSON array of zero start dates: [{"id": "default", "name": "Default", "date": "2024-01-01"}, ...]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("settings")
+}
+
+enum StaffCategory {
+  REGULAR
+  RELIEF
+  SUPERVISOR
+}
+
+enum ScheduleType {
+  DAILY
+  SHIFT_CYCLE
+}
+
+enum OverrideType {
+  TEMPORARY_ALLOCATION
+  ABSENCE
+}
