@@ -17,6 +17,7 @@ const error = ref<string | null>(null)
 const newStaff = ref<CreateStaffForm>({
   name: '',
   category: 'REGULAR',
+  isNightStaff: false,
   scheduleType: 'DAILY',
   daysOn: 4,
   daysOff: 4,
@@ -112,6 +113,7 @@ function resetForm() {
   newStaff.value = {
     name: '',
     category: 'REGULAR',
+    isNightStaff: false,
     scheduleType: 'DAILY',
     daysOn: 4,
     daysOff: 4,
@@ -149,6 +151,7 @@ function openEditForm(staff: Staff) {
   newStaff.value = {
     name: staff.name,
     category: staff.category,
+    isNightStaff: staff.isNightStaff,
     scheduleType: staff.scheduleType,
     daysOn: staff.daysOn,
     daysOff: staff.daysOff,
@@ -363,6 +366,19 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
             <option value="RELIEF">Relief</option>
             <option value="SUPERVISOR">Supervisor</option>
           </select>
+        </div>
+
+        <!-- Night Staff -->
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input
+              v-model="newStaff.isNightStaff"
+              type="checkbox"
+              class="checkbox"
+            >
+            Night Staff
+          </label>
+          <p class="form-help">Check this if the staff member works night shifts.</p>
         </div>
 
         <!-- Schedule Type -->

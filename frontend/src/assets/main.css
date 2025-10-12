@@ -595,44 +595,29 @@
     box-shadow: 0 0 0 2px var(--color-surface-elevated), 0 0 0 4px color-mix(in oklch, var(--color-text-muted) 40%, transparent), 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
-  .status-scheduled {
-    background-color: color-mix(in oklch, var(--color-warning) 10%, transparent);
-    color: var(--color-warning);
-    border-color: color-mix(in oklch, var(--color-warning) 30%, transparent);
+  /* Status Badge Base Styles */
+  .status-badge {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    padding: 0;
+    background: none;
+    border: none;
   }
 
-  .status-scheduled::before {
-    background-color: var(--color-warning);
+  .status-scheduled {
+    color: var(--color-warning);
   }
 
   .status-active {
-    background-color: color-mix(in oklch, var(--color-success) 10%, transparent);
     color: var(--color-success);
-    border-color: color-mix(in oklch, var(--color-success) 30%, transparent);
-  }
-
-  .status-active::before {
-    background-color: var(--color-success);
   }
 
   .status-off-duty {
-    background-color: color-mix(in oklch, var(--color-text-muted) 10%, transparent);
     color: var(--color-text-muted);
-    border-color: color-mix(in oklch, var(--color-text-muted) 30%, transparent);
-  }
-
-  .status-off-duty::before {
-    background-color: var(--color-text-muted);
   }
 
   .status-absent {
-    background-color: color-mix(in oklch, var(--color-error) 10%, transparent);
     color: var(--color-error);
-    border-color: color-mix(in oklch, var(--color-error) 30%, transparent);
-  }
-
-  .status-absent::before {
-    background-color: var(--color-error);
   }
 
   /* Card Layout Components */
@@ -664,6 +649,38 @@
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
+  }
+
+  /* Night staff styling */
+  .staff-item.night-staff {
+    background-color: color-mix(in oklch, var(--color-surface) 95%, var(--color-primary));
+    border-left: 3px solid var(--color-primary);
+  }
+
+  /* Shift time dividers */
+  .shift-divider {
+    height: 1px;
+    background-color: var(--color-border);
+    margin: var(--space-md) 0;
+    position: relative;
+  }
+
+  .shift-divider::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 1px;
+    background-color: var(--color-primary);
+  }
+
+  /* Day/Night divider within same shift time */
+  .day-night-divider {
+    height: 1px;
+    background-color: color-mix(in oklch, var(--color-border) 50%, transparent);
+    margin: var(--space-sm) var(--space-md);
   }
 
   .staff-name {

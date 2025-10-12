@@ -49,6 +49,7 @@ export interface Staff {
   id: number;
   name: string;
   category: StaffCategory;
+  isNightStaff: boolean;
 
   // Schedule configuration
   scheduleType: ScheduleType;
@@ -149,6 +150,7 @@ export interface CreateServiceForm {
 export interface CreateStaffForm {
   name: string;
   category?: StaffCategory;
+  isNightStaff?: boolean;
   scheduleType?: ScheduleType;
   daysOn?: number;
   daysOff?: number;
