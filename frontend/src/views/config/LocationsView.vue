@@ -352,20 +352,42 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
             <p>{{ viewingBuilding.departments.length }} department{{ viewingBuilding.departments.length !== 1 ? 's' : '' }}</p>
           </div>
           <div class="building-view-actions">
-            <button @click="editBuildingFromView" class="btn btn-secondary">Edit Building</button>
-            <button @click="deleteBuildingFromView" class="btn btn-danger">Delete Building</button>
+            <button @click="editBuildingFromView" class="icon-btn edit-btn" title="Edit Building">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button @click="deleteBuildingFromView" class="icon-btn delete-btn" title="Delete Building">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3,6 5,6 21,6"></polyline>
+                <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
           </div>
         </div>
 
         <div class="departments-section">
           <div class="departments-header">
             <h4>Departments</h4>
-            <button @click="openDepartmentFormFromBuilding" class="btn btn-primary">Add Department</button>
+            <button @click="openDepartmentFormFromBuilding" class="icon-btn add-btn" title="Add Department">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
           </div>
 
           <div v-if="viewingBuilding.departments.length === 0" class="no-departments">
             <p>No departments in this building yet.</p>
-            <button @click="openDepartmentFormFromBuilding" class="btn btn-primary">Add First Department</button>
+            <button @click="openDepartmentFormFromBuilding" class="icon-btn add-btn" title="Add First Department">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
           </div>
 
           <div v-else class="departments-list">
@@ -386,8 +408,20 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
                 </div>
               </div>
               <div class="department-actions">
-                <button @click="openEditDepartmentForm(department)" class="btn btn-sm">Edit</button>
-                <button @click="deleteDepartment(department)" class="btn btn-sm btn-danger">Delete</button>
+                <button @click="openEditDepartmentForm(department)" class="icon-btn edit-btn" title="Edit Department">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
+                <button @click="deleteDepartment(department)" class="icon-btn delete-btn" title="Delete Department">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3,6 5,6 21,6"></polyline>
+                    <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -591,6 +625,46 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 }
 
 .building-details {
+  color: #9ca3af;
+}
+
+/* Icon button styles for modal */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.icon-btn.edit-btn:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.icon-btn.delete-btn:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.icon-btn.add-btn:hover {
+  color: #059669;
+  border-color: #059669;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
   color: #9ca3af;
 }
 
