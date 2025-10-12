@@ -13,18 +13,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <article>
-    <header>
-      <h1>Staff Schedule</h1>
+  <article class="home-view">
+    <header class="page-header">
+      <div class="page-title-section">
+        <h1>Staff Schedule</h1>
+        <p class="page-subtitle">Monitor department and service staffing levels in real-time</p>
+      </div>
       <DateNavigation />
     </header>
 
-    <section>
+    <section class="content-section">
       <h2>Departments</h2>
       <DepartmentGrid />
     </section>
 
-    <section>
+    <section class="content-section">
       <h2>Services</h2>
       <ServiceGrid />
     </section>

@@ -266,11 +266,11 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 </script>
 
 <template>
-  <article>
-    <header>
+  <article class="config-content">
+    <header class="content-header">
       <h2>Buildings & Departments</h2>
-      <div>
-        <button @click="openDepartmentForm()">Add Department</button>
+      <div class="header-actions">
+        <button @click="openDepartmentForm()" class="btn-primary">Add Department</button>
         <button @click="openBuildingForm">Add Building</button>
       </div>
     </header>

@@ -183,10 +183,10 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 </script>
 
 <template>
-  <article>
-    <header>
+  <article class="config-content">
+    <header class="content-header">
       <h2>Services</h2>
-      <button @click="openCreateForm">Add Service</button>
+      <button @click="openCreateForm" class="btn-primary">Add Service</button>
     </header>
 
     <!-- Service Form Modal -->

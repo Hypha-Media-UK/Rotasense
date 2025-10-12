@@ -107,8 +107,8 @@ function deleteZeroStartDate(id: string) {
 </script>
 
 <template>
-  <article>
-    <header>
+  <article class="config-content">
+    <header class="content-header">
       <h2>Application Settings</h2>
     </header>
 

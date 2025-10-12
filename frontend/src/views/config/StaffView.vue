@@ -307,10 +307,10 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 </script>
 
 <template>
-  <article>
-    <header>
+  <article class="config-content">
+    <header class="content-header">
       <h2>Staff Management</h2>
-      <button @click="openCreateForm">Add Staff Member</button>
+      <button @click="openCreateForm" class="btn-primary">Add Staff Member</button>
     </header>
 
     <!-- Staff Form Modal -->
@@ -568,7 +568,7 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
       </template>
     </Modal>
 
-    <nav>
+    <nav class="staff-tabs">
       <button
         v-for="tab in tabs"
         :key="tab.key"
