@@ -313,7 +313,6 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
   <article class="config-content">
     <header class="content-header">
       <h2>Staff Management</h2>
-      <button @click="openCreateForm" class="btn-primary">Add Staff Member</button>
     </header>
 
     <!-- Staff Form Modal -->
@@ -584,16 +583,19 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
       </template>
     </Modal>
 
-    <nav class="staff-tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        @click="activeTab = tab.key"
-        :class="{ active: activeTab === tab.key }"
-      >
-        {{ tab.label }} ({{ tab.staff.length }})
-      </button>
-    </nav>
+    <div class="staff-header">
+      <nav class="staff-tabs">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          @click="activeTab = tab.key"
+          :class="{ active: activeTab === tab.key }"
+        >
+          {{ tab.label }} ({{ tab.staff.length }})
+        </button>
+      </nav>
+      <button @click="openCreateForm" class="btn-primary">Add Staff Member</button>
+    </div>
 
     <div v-if="configStore.loading">
       <p>Loading staff...</p>

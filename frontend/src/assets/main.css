@@ -774,16 +774,29 @@
     align-items: center;
   }
 
+  /* Staff Header Layout */
+  .staff-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--space-xl);
+    gap: var(--space-lg);
+  }
+
+  .staff-header > .btn-primary {
+    flex-shrink: 0;
+  }
+
   /* Staff Tabs Styling */
   .staff-tabs {
     background: none;
     border: none;
     padding: 0;
     display: flex;
-    justify-content: flex-end;
-    border-bottom: 1px solid var(--color-border);
-    margin-bottom: var(--space-xl);
+    justify-content: flex-start;
     gap: var(--space-xs);
+    flex: none;
   }
 
   .staff-tabs button {
@@ -1354,6 +1367,7 @@
     }
   }
 
+  @media (max-width: 768px) {
     .page-header {
       padding: 0;
     }
@@ -1378,13 +1392,19 @@
       min-width: 120px;
     }
 
+    .staff-header {
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
     .staff-tabs {
-      justify-content: stretch;
+      justify-content: flex-start;
       flex-wrap: wrap;
+      flex: none;
     }
 
     .staff-tabs button {
-      flex: 1;
+      flex: none;
       min-width: 100px;
     }
   }
