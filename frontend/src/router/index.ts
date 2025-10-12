@@ -32,7 +32,11 @@ const router = createRouter({
           name: 'config-staff',
           component: () => import('../views/config/StaffView.vue'),
         },
-
+        {
+          path: 'runner-pools',
+          name: 'config-runner-pools',
+          component: () => import('../views/config/RunnerPoolsView.vue'),
+        },
         {
           path: 'settings',
           name: 'config-settings',

@@ -8,6 +8,7 @@ import type {
   DepartmentStatus,
   ServiceStatus,
   StaffStatus,
+  RunnerPoolStatus,
   DayOfWeek,
   CreateOverrideForm
 } from '@/types'
@@ -197,6 +198,41 @@ export const useHomeStore = defineStore('home', () => {
       })
   })
 
+  // Calculate runner pool statuses
+  const runnerPoolStatuses = computed((): RunnerPoolStatus[] => {
+    const configStore = useConfigStore()
+
+    return configStore.runnerPools
+      .map(runnerPool => {
+        // Get staff permanently assigned to this runner pool
+        const assignedStaff = staffStatuses.value.filter(status =>
+          status.staff.runnerPoolId === runnerPool.id
+        )
+
+        // Get staff temporarily allocated to other areas from this pool
+        const temporarilyAllocatedStaff = assignedStaff.filter(status => {
+          // Check if they have a temporary allocation override for today
+          return status.override?.overrideType === 'TEMPORARY_ALLOCATION' &&
+                 (status.override.departmentId || status.override.serviceId)
+        })
+
+        const activeStaff = assignedStaff.filter(status => status.isActive && !status.isAbsent).length
+        const totalStaff = assignedStaff.length
+
+        return {
+          runnerPool,
+          assignedStaff,
+          temporarilyAllocatedStaff,
+          activeStaff,
+          totalStaff
+        }
+      })
+      .filter(status => {
+        // Only show if marked to display on home OR has active staff
+        return status.runnerPool.displayOnHome || status.activeStaff > 0
+      })
+  })
+
   // Helper function to calculate shift status for staff with shift cycles
   function calculateShiftStatus(staff: any, date: Date): boolean {
     if (!staff.daysOn || !staff.daysOff || !staff.zeroStartDateId) {
@@ -357,6 +393,7 @@ export const useHomeStore = defineStore('home', () => {
     staffStatuses,
     departmentStatuses,
     serviceStatuses,
+    runnerPoolStatuses,
 
     // Actions
     fetchOverrides,

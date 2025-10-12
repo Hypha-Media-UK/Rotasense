@@ -7,6 +7,7 @@ const tabs = [
   { name: 'Locations', path: '/config/locations' },
   { name: 'Services', path: '/config/services' },
   { name: 'Staff', path: '/config/staff' },
+  { name: 'Runner Pools', path: '/config/runner-pools' },
   { name: 'Settings', path: '/config/settings' }
 ]
 </script>

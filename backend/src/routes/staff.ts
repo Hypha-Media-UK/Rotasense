@@ -9,6 +9,7 @@ const router = express.Router();
 const createStaffSchema = z.object({
   name: nonEmptyStringSchema.describe('Staff name is required'),
   category: staffCategorySchema.optional(),
+  isNightStaff: z.boolean().optional(),
   scheduleType: scheduleTypeSchema.optional(),
   daysOn: optionalPositiveIntSchema,
   daysOff: optionalPositiveIntSchema,
@@ -16,7 +17,8 @@ const createStaffSchema = z.object({
   zeroStartDateId: zeroStartDateIdSchema.optional(),
   defaultStartTime: timeSchema.optional(),
   defaultEndTime: timeSchema.optional(),
-  contractedDays: daysOfWeekSchema
+  contractedDays: daysOfWeekSchema,
+  runnerPoolId: optionalPositiveIntSchema
 }).refine(
   (data) => {
     // If scheduleType is SHIFT_CYCLE, require shift cycle fields
@@ -91,14 +93,26 @@ router.get('/', async (req, res) => {
     const staff = await prisma.staff.findMany({
       where: whereClause,
       include: {
-        allocations: {
+        staff_allocations: {
           include: {
-            department: {
+            departments: {
               include: {
-                building: true
+                buildings: true
               }
             },
-            service: true
+            services: true
+          }
+        },
+        runner_pools: true,
+        runner_allocations: {
+          include: {
+            departments: {
+              include: {
+                buildings: true
+              }
+            },
+            services: true,
+            runner_pools: true
           }
         }
       },
@@ -129,14 +143,14 @@ router.get('/:id', async (req, res) => {
     const staff = await prisma.staff.findUnique({
       where: { id },
       include: {
-        allocations: {
+        staff_allocations: {
           include: {
-            department: {
+            departments: {
               include: {
-                building: true
+                buildings: true
               }
             },
-            service: true
+            services: true
           }
         }
       }
@@ -169,14 +183,14 @@ router.post('/', async (req, res) => {
         contractedDays: JSON.stringify(validatedData.contractedDays)
       },
       include: {
-        allocations: {
+        staff_allocations: {
           include: {
-            department: {
+            departments: {
               include: {
-                building: true
+                buildings: true
               }
             },
-            service: true
+            services: true
           }
         }
       }
@@ -220,14 +234,14 @@ router.put('/:id', async (req, res) => {
       where: { id },
       data: updateData,
       include: {
-        allocations: {
+        staff_allocations: {
           include: {
-            department: {
+            departments: {
               include: {
-                building: true
+                buildings: true
               }
             },
-            service: true
+            services: true
           }
         }
       }

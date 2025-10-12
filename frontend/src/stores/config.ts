@@ -8,11 +8,15 @@ import type {
   Staff,
   StaffAllocation,
   Settings,
+  RunnerPool,
+  RunnerAllocation,
   CreateBuildingForm,
   CreateDepartmentForm,
   CreateServiceForm,
   CreateStaffForm,
-  CreateAllocationForm
+  CreateAllocationForm,
+  CreateRunnerPoolForm,
+  CreateRunnerAllocationForm
 } from '@/types'
 
 export const useConfigStore = defineStore('config', () => {
@@ -22,6 +26,8 @@ export const useConfigStore = defineStore('config', () => {
   const services = ref<Service[]>([])
   const staff = ref<Staff[]>([])
   const allocations = ref<StaffAllocation[]>([])
+  const runnerPools = ref<RunnerPool[]>([])
+  const runnerAllocations = ref<RunnerAllocation[]>([])
 
   const settings = ref<Settings | null>(null)
   const loading = ref(false)
@@ -39,6 +45,9 @@ export const useConfigStore = defineStore('config', () => {
     }))
   })
 
+  const runnerStaff = computed(() => staff.value.filter(s => s.runnerPoolId !== null && s.runnerPoolId !== undefined))
+  const unallocatedStaff = computed(() => staff.value.filter(s => !s.runnerPoolId && !allocations.value.find(a => a.staffId === s.id)))
+
   // Actions
   async function fetchAllData() {
     loading.value = true
@@ -51,6 +60,8 @@ export const useConfigStore = defineStore('config', () => {
         servicesData,
         staffData,
         allocationsData,
+        runnerPoolsData,
+        runnerAllocationsData,
         settingsData
       ] = await Promise.all([
         apiService.getBuildings(),
@@ -58,6 +69,8 @@ export const useConfigStore = defineStore('config', () => {
         apiService.getServices(),
         apiService.getStaff(),
         apiService.getAllocations(),
+        apiService.getRunnerPools(),
+        apiService.getRunnerAllocations(),
         apiService.getSettings()
       ])
 
@@ -66,6 +79,8 @@ export const useConfigStore = defineStore('config', () => {
       services.value = servicesData
       staff.value = staffData
       allocations.value = allocationsData
+      runnerPools.value = runnerPoolsData
+      runnerAllocations.value = runnerAllocationsData
       settings.value = settingsData
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch data'
@@ -257,6 +272,78 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  // Runner Pool actions
+  async function createRunnerPool(data: CreateRunnerPoolForm) {
+    try {
+      const newRunnerPool = await apiService.createRunnerPool(data)
+      runnerPools.value.push(newRunnerPool)
+      return newRunnerPool
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to create runner pool'
+      throw err
+    }
+  }
+
+  async function updateRunnerPool(id: number, data: Partial<CreateRunnerPoolForm>) {
+    try {
+      const updatedRunnerPool = await apiService.updateRunnerPool(id, data)
+      const index = runnerPools.value.findIndex(rp => rp.id === id)
+      if (index !== -1) {
+        runnerPools.value[index] = updatedRunnerPool
+      }
+      return updatedRunnerPool
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to update runner pool'
+      throw err
+    }
+  }
+
+  async function deleteRunnerPool(id: number) {
+    try {
+      await apiService.deleteRunnerPool(id)
+      runnerPools.value = runnerPools.value.filter(rp => rp.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to delete runner pool'
+      throw err
+    }
+  }
+
+  // Runner Allocation actions
+  async function createRunnerAllocation(data: CreateRunnerAllocationForm) {
+    try {
+      const newAllocation = await apiService.createRunnerAllocation(data)
+      runnerAllocations.value.push(newAllocation)
+      return newAllocation
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to create runner allocation'
+      throw err
+    }
+  }
+
+  async function updateRunnerAllocation(id: number, data: Partial<CreateRunnerAllocationForm>) {
+    try {
+      const updatedAllocation = await apiService.updateRunnerAllocation(id, data)
+      const index = runnerAllocations.value.findIndex(ra => ra.id === id)
+      if (index !== -1) {
+        runnerAllocations.value[index] = updatedAllocation
+      }
+      return updatedAllocation
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to update runner allocation'
+      throw err
+    }
+  }
+
+  async function deleteRunnerAllocation(id: number) {
+    try {
+      await apiService.deleteRunnerAllocation(id)
+      runnerAllocations.value = runnerAllocations.value.filter(ra => ra.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to delete runner allocation'
+      throw err
+    }
+  }
+
 
 
   return {
@@ -266,6 +353,8 @@ export const useConfigStore = defineStore('config', () => {
     services,
     staff,
     allocations,
+    runnerPools,
+    runnerAllocations,
 
     settings,
     loading,
@@ -276,6 +365,8 @@ export const useConfigStore = defineStore('config', () => {
     reliefStaff,
     supervisorStaff,
     departmentsByBuilding,
+    runnerStaff,
+    unallocatedStaff,
 
     // Actions
     fetchAllData,
@@ -293,6 +384,12 @@ export const useConfigStore = defineStore('config', () => {
     deleteStaff,
     createAllocation,
     updateAllocation,
-    deleteAllocation
+    deleteAllocation,
+    createRunnerPool,
+    updateRunnerPool,
+    deleteRunnerPool,
+    createRunnerAllocation,
+    updateRunnerAllocation,
+    deleteRunnerAllocation
   }
 })

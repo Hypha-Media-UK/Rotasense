@@ -17,7 +17,7 @@ const updateBuildingSchema = z.object({
 // GET /api/buildings - Get all buildings with their departments
 router.get('/', async (req, res) => {
   try {
-    const buildings = await prisma.building.findMany({
+    const buildings = await prisma.buildings.findMany({
       include: {
         departments: {
           orderBy: { name: 'asc' }
@@ -40,7 +40,7 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid building ID' });
     }
 
-    const building = await prisma.building.findUnique({
+    const building = await prisma.buildings.findUnique({
       where: { id },
       include: {
         departments: {
@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
   try {
     const validatedData = createBuildingSchema.parse(req.body);
     
-    const building = await prisma.building.create({
+    const building = await prisma.buildings.create({
       data: validatedData,
       include: {
         departments: true
@@ -96,7 +96,7 @@ router.put('/:id', async (req, res) => {
 
     const validatedData = updateBuildingSchema.parse(req.body);
     
-    const building = await prisma.building.update({
+    const building = await prisma.buildings.update({
       where: { id },
       data: validatedData,
       include: {
@@ -126,7 +126,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid building ID' });
     }
 
-    await prisma.building.delete({
+    await prisma.buildings.delete({
       where: { id }
     });
 

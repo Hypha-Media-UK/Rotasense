@@ -44,16 +44,16 @@ router.get('/', async (req, res) => {
       whereClause.staffId = parseInt(staffId as string);
     }
 
-    const overrides = await prisma.dailyOverride.findMany({
+    const overrides = await prisma.daily_overrides.findMany({
       where: whereClause,
       include: {
         staff: true,
-        department: {
+        departments: {
           include: {
-            building: true
+            buildings: true
           }
         },
-        service: true
+        services: true
       },
       orderBy: [
         { date: 'desc' },
@@ -76,16 +76,16 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid override ID' });
     }
 
-    const override = await prisma.dailyOverride.findUnique({
+    const override = await prisma.daily_overrides.findUnique({
       where: { id },
       include: {
         staff: true,
-        department: {
+        departments: {
           include: {
-            building: true
+            buildings: true
           }
         },
-        service: true
+        services: true
       }
     });
 
@@ -105,19 +105,19 @@ router.post('/', async (req, res) => {
   try {
     const validatedData = createOverrideSchema.parse(req.body);
     
-    const override = await prisma.dailyOverride.create({
+    const override = await prisma.daily_overrides.create({
       data: {
         ...validatedData,
         date: new Date(validatedData.date)
       },
       include: {
         staff: true,
-        department: {
+        departments: {
           include: {
-            building: true
+            buildings: true
           }
         },
-        service: true
+        services: true
       }
     });
 
@@ -150,17 +150,17 @@ router.put('/:id', async (req, res) => {
       updateData.date = new Date(validatedData.date);
     }
     
-    const override = await prisma.dailyOverride.update({
+    const override = await prisma.daily_overrides.update({
       where: { id },
       data: updateData,
       include: {
         staff: true,
-        department: {
+        departments: {
           include: {
-            building: true
+            buildings: true
           }
         },
-        service: true
+        services: true
       }
     });
 
@@ -186,7 +186,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid override ID' });
     }
 
-    await prisma.dailyOverride.delete({
+    await prisma.daily_overrides.delete({
       where: { id }
     });
 

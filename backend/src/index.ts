@@ -13,6 +13,8 @@ import staffRoutes from './routes/staff';
 import allocationRoutes from './routes/allocations';
 import overrideRoutes from './routes/overrides';
 import settingsRoutes from './routes/settings';
+import runnerPoolRoutes from './routes/runnerPools';
+import runnerAllocationRoutes from './routes/runnerAllocations';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -46,6 +48,8 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/allocations', allocationRoutes);
 app.use('/api/overrides', overrideRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/runner-pools', runnerPoolRoutes);
+app.use('/api/runner-allocations', runnerAllocationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

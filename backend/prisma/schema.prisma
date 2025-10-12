@@ -11,28 +11,34 @@ model buildings {
   id          Int           @id @default(autoincrement())
   name        String        @unique
   createdAt   DateTime      @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime      @updatedAt
   departments departments[]
 }
 
 model daily_overrides {
   id           Int                          @id @default(autoincrement())
   date         DateTime                     @db.Date
+  endDate      DateTime?                    @db.Date
   staffId      Int
   departmentId Int?
   serviceId    Int?
+  runnerPoolId Int?
   overrideType daily_overrides_overrideType
   startTime    String?
   endTime      String?
   reason       String?
+  autoExpire   Boolean                      @default(true)
   createdAt    DateTime                     @default(now())
-  updatedAt    DateTime
+  updatedAt    DateTime                     @updatedAt
   departments  departments?                 @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   services     services?                    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  runner_pools runner_pools?                @relation(fields: [runnerPoolId], references: [id], onDelete: Cascade)
   staff        staff                        @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  runner_allocations runner_allocations[]
 
   @@index([departmentId], map: "daily_overrides_departmentId_fkey")
   @@index([serviceId], map: "daily_overrides_serviceId_fkey")
+  @@index([runnerPoolId], map: "daily_overrides_runnerPoolId_fkey")
   @@index([staffId], map: "daily_overrides_staffId_fkey")
 }
 
@@ -46,11 +52,12 @@ model departments {
   minStaff          Int                 @default(1)
   displayOnHome     Boolean             @default(false)
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime            @updatedAt
   is24x7            Boolean             @default(false)
-  daily_overrides   daily_overrides[]
-  buildings         buildings           @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  staff_allocations staff_allocations[]
+  daily_overrides    daily_overrides[]
+  buildings          buildings           @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  staff_allocations  staff_allocations[]
+  runner_allocations runner_allocations[]
 
   @@unique([name, buildingId])
   @@index([buildingId], map: "departments_buildingId_fkey")
@@ -65,17 +72,18 @@ model services {
   minStaff          Int                 @default(1)
   displayOnHome     Boolean             @default(false)
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime            @updatedAt
   is24x7            Boolean             @default(false)
-  daily_overrides   daily_overrides[]
-  staff_allocations staff_allocations[]
+  daily_overrides    daily_overrides[]
+  staff_allocations  staff_allocations[]
+  runner_allocations runner_allocations[]
 }
 
 model settings {
   id             Int      @id @default(autoincrement())
   timeFormat     String   @default("24")
   createdAt      DateTime @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime @updatedAt
   zeroStartDates String   @default("[]")
 }
 
@@ -83,18 +91,24 @@ model staff {
   id                Int                 @id @default(autoincrement())
   name              String              @unique
   category          staff_category      @default(REGULAR)
+  isNightStaff      Boolean             @default(false)
   defaultStartTime  String              @default("08:00")
   defaultEndTime    String              @default("20:00")
   contractedDays    String
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime            @updatedAt
   daysOff           Int?
   daysOn            Int?
   scheduleType      staff_scheduleType  @default(DAILY)
   shiftOffset       Int?
   zeroStartDateId   String?
+  runnerPoolId      Int?
   daily_overrides   daily_overrides[]
   staff_allocations staff_allocations[]
+  runner_allocations runner_allocations[]
+  runner_pools      runner_pools?       @relation(fields: [runnerPoolId], references: [id], onDelete: SetNull)
+
+  @@index([runnerPoolId], map: "staff_runnerPoolId_fkey")
 }
 
 model staff_allocations {
@@ -103,7 +117,7 @@ model staff_allocations {
   departmentId Int?
   serviceId    Int?
   createdAt    DateTime     @default(now())
-  updatedAt    DateTime
+  updatedAt    DateTime     @updatedAt
   departments  departments? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   services     services?    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   staff        staff        @relation(fields: [staffId], references: [id], onDelete: Cascade)
@@ -111,6 +125,43 @@ model staff_allocations {
   @@index([departmentId], map: "staff_allocations_departmentId_fkey")
   @@index([serviceId], map: "staff_allocations_serviceId_fkey")
   @@index([staffId], map: "staff_allocations_staffId_fkey")
+}
+
+model runner_pools {
+  id                 Int                  @id @default(autoincrement())
+  name               String               @unique
+  description        String?
+  displayOnHome      Boolean              @default(true)
+  displayOrder       Int                  @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  staff              staff[]
+  daily_overrides    daily_overrides[]
+  runner_allocations runner_allocations[]
+}
+
+model runner_allocations {
+  id                   Int               @id @default(autoincrement())
+  staffId              Int
+  departmentId         Int?
+  serviceId            Int?
+  runnerPoolId         Int?
+  startDate            DateTime          @db.Date
+  endDate              DateTime?         @db.Date
+  createdByOverrideId  Int?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  staff                staff             @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  departments          departments?      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  services             services?         @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  runner_pools         runner_pools?     @relation(fields: [runnerPoolId], references: [id], onDelete: Cascade)
+  daily_overrides      daily_overrides?  @relation(fields: [createdByOverrideId], references: [id], onDelete: SetNull)
+
+  @@index([staffId], map: "runner_allocations_staffId_fkey")
+  @@index([departmentId], map: "runner_allocations_departmentId_fkey")
+  @@index([serviceId], map: "runner_allocations_serviceId_fkey")
+  @@index([runnerPoolId], map: "runner_allocations_runnerPoolId_fkey")
+  @@index([createdByOverrideId], map: "runner_allocations_createdByOverrideId_fkey")
 }
 
 enum staff_category {

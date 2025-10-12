@@ -63,8 +63,13 @@ export interface Staff {
   defaultEndTime: string;
   contractedDays: DayOfWeek[]; // For DAILY schedule type
 
+  // Runner pool assignment
+  runnerPoolId?: number;
+  runnerPool?: RunnerPool;
+
   allocations?: StaffAllocation[];
   dailyOverrides?: DailyOverride[];
+  runnerAllocations?: RunnerAllocation[];
   createdAt: string;
   updatedAt: string;
 }
@@ -86,16 +91,48 @@ export interface StaffAllocation {
 export interface DailyOverride {
   id: number;
   date: string;
+  endDate?: string;
   staffId: number;
   staff?: Staff;
   departmentId?: number;
   department?: Department;
   serviceId?: number;
   service?: Service;
+  runnerPoolId?: number;
+  runnerPool?: RunnerPool;
   overrideType: OverrideType;
   startTime?: string;
   endTime?: string;
   reason?: string;
+  autoExpire: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RunnerPool {
+  id: number;
+  name: string;
+  description?: string;
+  displayOnHome: boolean;
+  displayOrder: number;
+  staff?: Staff[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RunnerAllocation {
+  id: number;
+  staffId: number;
+  staff?: Staff;
+  departmentId?: number;
+  department?: Department;
+  serviceId?: number;
+  service?: Service;
+  runnerPoolId?: number;
+  runnerPool?: RunnerPool;
+  startDate: string;
+  endDate?: string;
+  createdByOverrideId?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,6 +196,7 @@ export interface CreateStaffForm {
   defaultStartTime?: string;
   defaultEndTime?: string;
   contractedDays: DayOfWeek[];
+  runnerPoolId?: number;
 }
 
 export interface CreateAllocationForm {
@@ -169,13 +207,32 @@ export interface CreateAllocationForm {
 
 export interface CreateOverrideForm {
   date: string;
+  endDate?: string;
   staffId: number;
   departmentId?: number;
   serviceId?: number;
+  runnerPoolId?: number;
   overrideType: OverrideType;
   startTime?: string;
   endTime?: string;
   reason?: string;
+  autoExpire?: boolean;
+}
+
+export interface CreateRunnerPoolForm {
+  name: string;
+  description?: string;
+  displayOnHome?: boolean;
+  displayOrder?: number;
+}
+
+export interface CreateRunnerAllocationForm {
+  staffId: number;
+  departmentId?: number;
+  serviceId?: number;
+  runnerPoolId?: number;
+  startDate: string;
+  endDate?: string;
 }
 
 
@@ -208,4 +265,12 @@ export interface ServiceStatus {
   isUnderstaffed: boolean;
   requiredStaff: number;
   activeStaff: number;
+}
+
+export interface RunnerPoolStatus {
+  runnerPool: RunnerPool;
+  assignedStaff: StaffStatus[];
+  temporarilyAllocatedStaff: StaffStatus[];
+  activeStaff: number;
+  totalStaff: number;
 }

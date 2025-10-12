@@ -33,16 +33,16 @@ router.get('/', async (req, res) => {
       whereClause.staffId = parseInt(staffId as string);
     }
 
-    const allocations = await prisma.staffAllocation.findMany({
+    const allocations = await prisma.staff_allocations.findMany({
       where: whereClause,
       include: {
         staff: true,
-        department: {
+        departments: {
           include: {
-            building: true
+            buildings: true
           }
         },
-        service: true
+        services: true
       },
       orderBy: [
         { staff: { name: 'asc' } },
@@ -65,16 +65,16 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid allocation ID' });
     }
 
-    const allocation = await prisma.staffAllocation.findUnique({
+    const allocation = await prisma.staff_allocations.findUnique({
       where: { id },
       include: {
         staff: true,
-        department: {
+        departments: {
           include: {
-            building: true
+            buildings: true
           }
         },
-        service: true
+        services: true
       }
     });
 
@@ -94,16 +94,16 @@ router.post('/', async (req, res) => {
   try {
     const validatedData = createAllocationSchema.parse(req.body);
     
-    const allocation = await prisma.staffAllocation.create({
+    const allocation = await prisma.staff_allocations.create({
       data: validatedData,
       include: {
         staff: true,
-        department: {
+        departments: {
           include: {
-            building: true
+            buildings: true
           }
         },
-        service: true
+        services: true
       }
     });
 
@@ -133,17 +133,17 @@ router.put('/:id', async (req, res) => {
     
     const updateData = validatedData;
     
-    const allocation = await prisma.staffAllocation.update({
+    const allocation = await prisma.staff_allocations.update({
       where: { id },
       data: updateData,
       include: {
         staff: true,
-        department: {
+        departments: {
           include: {
-            building: true
+            buildings: true
           }
         },
-        service: true
+        services: true
       }
     });
 
@@ -169,7 +169,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid allocation ID' });
     }
 
-    await prisma.staffAllocation.delete({
+    await prisma.staff_allocations.delete({
       where: { id }
     });
 

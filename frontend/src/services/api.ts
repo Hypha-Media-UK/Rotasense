@@ -6,12 +6,16 @@ import type {
   StaffAllocation,
   DailyOverride,
   Settings,
+  RunnerPool,
+  RunnerAllocation,
   CreateBuildingForm,
   CreateDepartmentForm,
   CreateServiceForm,
   CreateStaffForm,
   CreateAllocationForm,
-  CreateOverrideForm
+  CreateOverrideForm,
+  CreateRunnerPoolForm,
+  CreateRunnerAllocationForm
 } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -274,6 +278,68 @@ class ApiService {
     return this.request<Settings>('/api/settings', {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  }
+
+  // Runner Pools
+  async getRunnerPools(): Promise<RunnerPool[]> {
+    return this.request<RunnerPool[]>('/api/runner-pools');
+  }
+
+  async getRunnerPool(id: number): Promise<RunnerPool> {
+    return this.request<RunnerPool>(`/api/runner-pools/${id}`);
+  }
+
+  async createRunnerPool(data: CreateRunnerPoolForm): Promise<RunnerPool> {
+    return this.request<RunnerPool>('/api/runner-pools', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateRunnerPool(id: number, data: Partial<CreateRunnerPoolForm>): Promise<RunnerPool> {
+    return this.request<RunnerPool>(`/api/runner-pools/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteRunnerPool(id: number): Promise<void> {
+    return this.request<void>(`/api/runner-pools/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Runner Allocations
+  async getRunnerAllocations(staffId?: number, active?: boolean): Promise<RunnerAllocation[]> {
+    const params = new URLSearchParams();
+    if (staffId) params.append('staffId', staffId.toString());
+    if (active !== undefined) params.append('active', active.toString());
+    const queryString = params.toString();
+    return this.request<RunnerAllocation[]>(`/api/runner-allocations${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getRunnerAllocation(id: number): Promise<RunnerAllocation> {
+    return this.request<RunnerAllocation>(`/api/runner-allocations/${id}`);
+  }
+
+  async createRunnerAllocation(data: CreateRunnerAllocationForm): Promise<RunnerAllocation> {
+    return this.request<RunnerAllocation>('/api/runner-allocations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateRunnerAllocation(id: number, data: Partial<CreateRunnerAllocationForm>): Promise<RunnerAllocation> {
+    return this.request<RunnerAllocation>(`/api/runner-allocations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteRunnerAllocation(id: number): Promise<void> {
+    return this.request<void>(`/api/runner-allocations/${id}`, {
+      method: 'DELETE',
     });
   }
 

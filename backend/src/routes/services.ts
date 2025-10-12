@@ -50,9 +50,9 @@ const updateServiceSchema = z.object({
 // GET /api/services - Get all services
 router.get('/', async (req, res) => {
   try {
-    const services = await prisma.service.findMany({
+    const services = await prisma.services.findMany({
       include: {
-        staffAllocations: {
+        staff_allocations: {
           include: {
             staff: true
           }
@@ -62,7 +62,7 @@ router.get('/', async (req, res) => {
     });
 
     // Parse JSON strings back to arrays
-    const servicesWithParsedData = services.map(service => ({
+    const servicesWithParsedData = services.map((service: any) => ({
       ...service,
       operationalDays: JSON.parse(service.operationalDays)
     }));
@@ -82,10 +82,10 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid service ID' });
     }
 
-    const service = await prisma.service.findUnique({
+    const service = await prisma.services.findUnique({
       where: { id },
       include: {
-        staffAllocations: {
+        staff_allocations: {
           include: {
             staff: true
           }
@@ -114,13 +114,13 @@ router.post('/', async (req, res) => {
   try {
     const validatedData = createServiceSchema.parse(req.body);
     
-    const service = await prisma.service.create({
+    const service = await prisma.services.create({
       data: {
         ...validatedData,
         operationalDays: JSON.stringify(validatedData.operationalDays)
       },
       include: {
-        staffAllocations: {
+        staff_allocations: {
           include: {
             staff: true
           }
@@ -162,11 +162,11 @@ router.put('/:id', async (req, res) => {
       updateData.operationalDays = JSON.stringify(validatedData.operationalDays);
     }
     
-    const service = await prisma.service.update({
+    const service = await prisma.services.update({
       where: { id },
       data: updateData,
       include: {
-        staffAllocations: {
+        staff_allocations: {
           include: {
             staff: true
           }
@@ -201,7 +201,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid service ID' });
     }
 
-    await prisma.service.delete({
+    await prisma.services.delete({
       where: { id }
     });
 

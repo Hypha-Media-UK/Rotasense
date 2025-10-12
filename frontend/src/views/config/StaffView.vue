@@ -25,7 +25,8 @@ const newStaff = ref<CreateStaffForm>({
   zeroStartDateId: undefined,
   defaultStartTime: '08:00',
   defaultEndTime: '20:00',
-  contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+  contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+  runnerPoolId: undefined
 })
 
 // Day-based time scheduling
@@ -121,7 +122,8 @@ function resetFormData() {
     zeroStartDateId: defaultZeroStartDateId.value,
     defaultStartTime: '08:00',
     defaultEndTime: '20:00',
-    contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+    contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+    runnerPoolId: undefined
   }
   selectedDay.value = null
   dayTimes.value = {}
@@ -163,7 +165,8 @@ function openEditForm(staff: Staff) {
     zeroStartDateId: staff.zeroStartDateId,
     defaultStartTime: staff.defaultStartTime,
     defaultEndTime: staff.defaultEndTime,
-    contractedDays: [...staff.contractedDays]
+    contractedDays: [...staff.contractedDays],
+    runnerPoolId: staff.runnerPoolId
   }
 
   // Reset day selection and times
@@ -538,6 +541,27 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
                   >
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Runner Pool Assignment Section -->
+          <div class="form-section">
+            <h3 class="section-title">Runner Pool Assignment</h3>
+            <p class="form-help">Assign this staff member to a runner pool for hospital-wide duties</p>
+
+            <div class="form-group">
+              <label class="form-label">Runner Pool</label>
+              <select v-model="newStaff.runnerPoolId" class="form-select">
+                <option :value="undefined">No runner pool assignment</option>
+                <option v-for="pool in configStore.runnerPools" :key="pool.id" :value="pool.id">
+                  {{ pool.name }}
+                  <span v-if="pool.description"> - {{ pool.description }}</span>
+                </option>
+              </select>
+              <p class="form-help">
+                Runner pool staff are available hospital-wide for patient transfers, sample delivery, and general support.
+                They can be temporarily allocated to specific departments or services as needed.
+              </p>
             </div>
           </div>
         </form>

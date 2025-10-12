@@ -52,10 +52,10 @@ const updateDepartmentSchema = z.object({
 // GET /api/departments - Get all departments
 router.get('/', async (req, res) => {
   try {
-    const departments = await prisma.department.findMany({
+    const departments = await prisma.departments.findMany({
       include: {
-        building: true,
-        staffAllocations: {
+        buildings: true,
+        staff_allocations: {
           include: {
             staff: true
           }
@@ -65,7 +65,7 @@ router.get('/', async (req, res) => {
     });
 
     // Parse JSON strings back to arrays
-    const departmentsWithParsedData = departments.map(dept => ({
+    const departmentsWithParsedData = departments.map((dept: any) => ({
       ...dept,
       operationalDays: JSON.parse(dept.operationalDays)
     }));
@@ -85,11 +85,11 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid department ID' });
     }
 
-    const department = await prisma.department.findUnique({
+    const department = await prisma.departments.findUnique({
       where: { id },
       include: {
-        building: true,
-        staffAllocations: {
+        buildings: true,
+        staff_allocations: {
           include: {
             staff: true
           }
@@ -118,14 +118,14 @@ router.post('/', async (req, res) => {
   try {
     const validatedData = createDepartmentSchema.parse(req.body);
     
-    const department = await prisma.department.create({
+    const department = await prisma.departments.create({
       data: {
         ...validatedData,
         operationalDays: JSON.stringify(validatedData.operationalDays)
       },
       include: {
-        building: true,
-        staffAllocations: {
+        buildings: true,
+        staff_allocations: {
           include: {
             staff: true
           }
@@ -167,12 +167,12 @@ router.put('/:id', async (req, res) => {
       updateData.operationalDays = JSON.stringify(validatedData.operationalDays);
     }
     
-    const department = await prisma.department.update({
+    const department = await prisma.departments.update({
       where: { id },
       data: updateData,
       include: {
-        building: true,
-        staffAllocations: {
+        buildings: true,
+        staff_allocations: {
           include: {
             staff: true
           }
@@ -207,7 +207,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Invalid department ID' });
     }
 
-    await prisma.department.delete({
+    await prisma.departments.delete({
       where: { id }
     });
 
