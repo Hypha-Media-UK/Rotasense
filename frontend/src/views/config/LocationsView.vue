@@ -11,8 +11,10 @@ const buildingsWithDepartments = computed(() => configStore.departmentsByBuildin
 
 // Form state
 const showBuildingForm = ref(false)
+const showBuildingView = ref(false)
 const showDepartmentForm = ref(false)
 const editingBuilding = ref<Building | null>(null)
+const viewingBuilding = ref<Building | null>(null)
 const editingDepartment = ref<Department | null>(null)
 const selectedBuildingForDept = ref<number | null>(null)
 const loading = ref(false)
@@ -101,6 +103,36 @@ function openEditBuildingForm(building: Building) {
   editingBuilding.value = building
   newBuilding.value = { name: building.name }
   showBuildingForm.value = true
+}
+
+function openBuildingModal(building: Building) {
+  viewingBuilding.value = building
+  showBuildingView.value = true
+}
+
+function closeBuildingView() {
+  viewingBuilding.value = null
+  showBuildingView.value = false
+}
+
+function openDepartmentFormFromBuilding() {
+  if (viewingBuilding.value) {
+    openDepartmentForm(viewingBuilding.value.id)
+  }
+}
+
+function editBuildingFromView() {
+  if (viewingBuilding.value) {
+    closeBuildingView()
+    openEditBuildingForm(viewingBuilding.value)
+  }
+}
+
+async function deleteBuildingFromView() {
+  if (viewingBuilding.value && confirm(`Are you sure you want to delete "${viewingBuilding.value.name}"? This will also delete all departments in this building.`)) {
+    await deleteBuilding(viewingBuilding.value)
+    closeBuildingView()
+  }
 }
 
 async function saveBuilding() {
@@ -311,6 +343,62 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
       </template>
     </Modal>
 
+    <!-- Building View Modal -->
+    <Modal :show="showBuildingView" :title="viewingBuilding?.name || 'Building Details'" size="lg" @close="closeBuildingView">
+      <div v-if="viewingBuilding">
+        <div class="building-view-header">
+          <div class="building-view-info">
+            <h3>{{ viewingBuilding.name }}</h3>
+            <p>{{ viewingBuilding.departments.length }} department{{ viewingBuilding.departments.length !== 1 ? 's' : '' }}</p>
+          </div>
+          <div class="building-view-actions">
+            <button @click="editBuildingFromView" class="btn btn-secondary">Edit Building</button>
+            <button @click="deleteBuildingFromView" class="btn btn-danger">Delete Building</button>
+          </div>
+        </div>
+
+        <div class="departments-section">
+          <div class="departments-header">
+            <h4>Departments</h4>
+            <button @click="openDepartmentFormFromBuilding" class="btn btn-primary">Add Department</button>
+          </div>
+
+          <div v-if="viewingBuilding.departments.length === 0" class="no-departments">
+            <p>No departments in this building yet.</p>
+            <button @click="openDepartmentFormFromBuilding" class="btn btn-primary">Add First Department</button>
+          </div>
+
+          <div v-else class="departments-list">
+            <div
+              v-for="department in viewingBuilding.departments"
+              :key="department.id"
+              class="department-item"
+            >
+              <div class="department-info">
+                <h5>{{ department.name }}</h5>
+                <div class="department-details">
+                  <span>{{ getDepartmentScheduleDisplay(department) }}</span>
+                  <span>{{ department.operationalDays.length }} days/week</span>
+                  <span>Min {{ department.minStaff }} staff</span>
+                  <span :class="department.displayOnHome ? 'status-active' : 'status-inactive'">
+                    {{ department.displayOnHome ? 'Visible on Home' : 'Hidden from Home' }}
+                  </span>
+                </div>
+              </div>
+              <div class="department-actions">
+                <button @click="openEditDepartmentForm(department)" class="btn btn-sm">Edit</button>
+                <button @click="deleteDepartment(department)" class="btn btn-sm btn-danger">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <button @click="closeBuildingView" class="btn">Close</button>
+      </template>
+    </Modal>
+
     <!-- Department Form Modal -->
     <Modal :show="showDepartmentForm" :title="departmentFormTitle" size="lg" @close="resetDepartmentForm">
       <div v-if="error" class="error-message">
@@ -436,47 +524,176 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
         <button @click="openBuildingForm">Create Your First Building</button>
       </div>
 
-      <article
-        v-for="building in buildingsWithDepartments"
-        :key="building.id"
-      >
-        <header>
-          <h3>{{ building.name }}</h3>
-          <div>
-            <button @click="openEditBuildingForm(building)">Edit</button>
-            <button @click="openDepartmentForm(building.id)">Add Department</button>
-            <button @click="deleteBuilding(building)">Delete</button>
+      <div v-else class="buildings-grid">
+        <div
+          v-for="building in buildingsWithDepartments"
+          :key="building.id"
+          class="building-card"
+        >
+          <div class="building-info">
+            <h3>{{ building.name }}</h3>
+            <div class="building-details">
+              {{ building.departments.length }} department{{ building.departments.length !== 1 ? 's' : '' }}
+            </div>
           </div>
-        </header>
-
-        <section v-if="building.departments.length > 0">
-          <h4>Departments ({{ building.departments.length }})</h4>
-          <ul>
-            <li
-              v-for="department in building.departments"
-              :key="department.id"
-            >
-              <div>
-                <span>{{ department.name }}</span>
-                <time>{{ getDepartmentScheduleDisplay(department) }}</time>
-                <span>{{ department.operationalDays.length }} days/week</span>
-              </div>
-              <div>
-                <button @click="openEditDepartmentForm(department)">Edit</button>
-                <button @click="deleteDepartment(department)">Delete</button>
-              </div>
-            </li>
-          </ul>
-        </section>
-
-        <div v-else>
-          <p>No departments in this building</p>
-          <button @click="openDepartmentForm(building.id)">Add First Department</button>
+          <div class="building-actions">
+            <button @click="openBuildingModal(building)" class="icon-btn view-btn" title="View Building">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
         </div>
-      </article>
+      </div>
     </section>
   </article>
 </template>
+
+<style scoped>
+.buildings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.building-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.building-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.building-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.building-actions button {
+  border-radius: 4px;
+}
+
+.building-actions button svg {
+  color: #9ca3af;
+}
+
+.building-details {
+  color: #9ca3af;
+}
+
+/* Building View Modal Styles */
+.building-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.building-view-info h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.building-view-info p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.building-view-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.departments-section {
+  margin-top: 1rem;
+}
+
+.departments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.departments-header h4 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.no-departments {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.departments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.department-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #f9fafb;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.department-info {
+  flex: 1;
+}
+
+.department-info h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.department-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.department-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.status-active {
+  color: #059669 !important;
+  font-weight: 500;
+}
+
+.status-inactive {
+  color: #dc2626 !important;
+  font-weight: 500;
+}
+</style>
 
 
 
