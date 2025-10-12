@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Modal from '@/components/Modal.vue'
@@ -146,14 +146,8 @@ function resetAllocationForm() {
 }
 
 function openCreateForm() {
-  console.log('openCreateForm called - before:', showCreateForm.value)
   resetFormData()
   showCreateForm.value = true
-  console.log('openCreateForm called - after:', showCreateForm.value)
-  // Force a nextTick to ensure reactivity
-  nextTick(() => {
-    console.log('nextTick - showCreateForm:', showCreateForm.value)
-  })
 }
 
 function openEditForm(staff: Staff) {
@@ -327,7 +321,6 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 
     <!-- Staff Form Modal -->
     <Modal :show="showCreateForm" :title="formTitle" size="lg" @close="resetForm">
-      <!-- Debug: {{ showCreateForm }} -->
       <div v-if="error" class="error-message">
         {{ error }}
       </div>
@@ -594,8 +587,6 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
       </template>
     </Modal>
 
-    <!-- Debug: showCreateForm = {{ showCreateForm }} -->
-
     <div class="staff-header">
       <nav class="staff-tabs">
         <button
@@ -629,41 +620,90 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
           <button @click="openCreateForm">Add {{ tab.label }} Staff Member</button>
         </div>
 
-        <div v-else>
-          <article
+        <div v-else class="staff-grid">
+          <div
             v-for="staff in tab.staff"
             :key="staff.id"
+            class="staff-card"
           >
-            <header>
+            <div class="staff-info">
               <h3>{{ staff.name }}</h3>
-              <div>
-                <button @click="openEditForm(staff)">Edit</button>
-                <button @click="deleteStaff(staff)">Delete</button>
+              <div v-if="staff.allocations && staff.allocations.length > 0" class="staff-allocations">
+                <template v-for="(allocation, index) in staff.allocations" :key="allocation.id">
+                  <span v-if="allocation.department">{{ allocation.department.name }}</span>
+                  <span v-else-if="allocation.service">{{ allocation.service.name }}</span>
+                  <span v-if="index < staff.allocations.length - 1">, </span>
+                </template>
               </div>
-            </header>
-
-            <div>
-              <time>{{ getStaffScheduleDisplay(staff) }}</time>
-              <span>{{ staff.scheduleType === 'SHIFT_CYCLE' ? 'Rotating Schedule' : `${staff.contractedDays.length} days/week` }}</span>
-              <span>{{ staff.category }}</span>
-
-              <div v-if="!staff.allocations || staff.allocations.length === 0">
-                No allocations
-              </div>
-              <ul v-else>
-                <li v-for="allocation in staff.allocations" :key="allocation.id">
-                  <strong v-if="allocation.department">{{ allocation.department.name }}</strong>
-                  <strong v-else-if="allocation.service">{{ allocation.service.name }}</strong>
-                </li>
-              </ul>
             </div>
-          </article>
+            <div class="staff-actions">
+              <button @click="openEditForm(staff)" class="icon-btn edit-btn" title="Edit Staff">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button @click="deleteStaff(staff)" class="icon-btn delete-btn" title="Delete Staff">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3,6 5,6 21,6"></polyline>
+                  <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
     </section>
   </article>
 </template>
 
+<style scoped>
+
+.staff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.staff-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.staff-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.staff-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.staff-actions button {
+  border-radius: 4px;
+}
+
+.staff-actions button svg {
+  color: #9ca3af;
+}
+
+.staff-allocations {
+  color: #9ca3af;
+}
+</style>
 
 
 

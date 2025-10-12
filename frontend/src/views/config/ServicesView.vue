@@ -308,32 +308,81 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
         <button @click="openCreateForm">Create Your First Service</button>
       </div>
 
-      <article
-        v-for="service in configStore.services"
-        :key="service.id"
-      >
-        <header>
+      <div v-else class="services-grid">
+        <div
+          v-for="service in configStore.services"
+          :key="service.id"
+          class="service-card"
+        >
+        <div class="service-info">
           <h3>{{ service.name }}</h3>
-          <div>
-            <button @click="openEditForm(service)">Edit</button>
-            <button @click="deleteService(service)">Delete</button>
+          <div class="service-details">
+            Min {{ service.minStaff }} staff required
           </div>
-        </header>
-
-        <div>
-          <time>{{ getServiceScheduleDisplay(service) }}</time>
-          <span>{{ service.operationalDays.length }} days/week</span>
-          <span>Min {{ service.minStaff }} staff required</span>
-
-          <span :class="service.displayOnHome ? 'status-active' : 'status-off-duty'">
-            {{ service.displayOnHome ? 'Visible on Home' : 'Hidden from Home' }}
-          </span>
         </div>
-      </article>
+        <div class="service-actions">
+          <button @click="openEditForm(service)" class="icon-btn edit-btn" title="Edit Service">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button @click="deleteService(service)" class="icon-btn delete-btn" title="Delete Service">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3,6 5,6 21,6"></polyline>
+              <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+      </div>
     </section>
   </article>
 </template>
 
+<style scoped>
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
 
+.service-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
+.service-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 
+.service-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.service-actions button {
+  border-radius: 4px;
+}
+
+.service-actions button svg {
+  color: #9ca3af;
+}
+
+.service-details {
+  color: #9ca3af;
+}
+</style>
