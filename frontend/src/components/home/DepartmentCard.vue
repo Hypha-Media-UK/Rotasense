@@ -21,43 +21,22 @@ const statusText = computed(() => {
   return 'Closed'
 })
 
-const capacityPercentage = computed(() => {
-  const required = props.departmentStatus.requiredStaff
-  const active = props.departmentStatus.activeStaff
-  return required > 0 ? Math.min((active / required) * 100, 100) : 0
-})
 
-const capacityClass = computed(() => {
-  const percentage = capacityPercentage.value
-  if (percentage < 100) return 'understaffed'
-  if (percentage === 100) return 'optimal'
-  return 'overstaffed'
-})
 </script>
 
 <template>
   <article>
     <header>
+      <span
+        class="status-light"
+        :class="statusClass"
+        :title="statusText"
+        :aria-label="statusText"
+      ></span>
+
       <div class="card-title-row">
         <h3>{{ departmentStatus.department.name }}</h3>
-        <span class="status-badge" :class="statusClass">
-          {{ statusText }}
-        </span>
-      </div>
-
-      <time>{{ departmentStatus.department.startTime }} - {{ departmentStatus.department.endTime }}</time>
-
-      <div class="capacity-indicator">
-        <div class="capacity-bar">
-          <div
-            class="capacity-fill"
-            :class="capacityClass"
-            :style="{ width: capacityPercentage + '%' }"
-          ></div>
-        </div>
-        <span class="capacity-text">
-          {{ departmentStatus.activeStaff }} / {{ departmentStatus.requiredStaff }} Staff
-        </span>
+        <span class="capacity-text">{{ departmentStatus.activeStaff }}/{{ departmentStatus.requiredStaff }} Staff</span>
       </div>
     </header>
 

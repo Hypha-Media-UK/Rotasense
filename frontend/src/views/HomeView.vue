@@ -20,12 +20,16 @@ onMounted(() => {
 
     <section class="content-section">
       <h2>Departments</h2>
-      <DepartmentGrid />
+      <div class="cards-container">
+        <DepartmentGrid />
+      </div>
     </section>
 
     <section class="content-section">
       <h2>Services</h2>
-      <ServiceGrid />
+      <div class="cards-container">
+        <ServiceGrid />
+      </div>
     </section>
   </article>
 </template>
