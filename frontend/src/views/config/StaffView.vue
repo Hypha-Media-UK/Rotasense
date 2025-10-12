@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Modal from '@/components/Modal.vue'
@@ -109,7 +109,7 @@ function getStaffScheduleDisplay(staff: Staff): string {
 }
 
 // Methods
-function resetForm() {
+function resetFormData() {
   newStaff.value = {
     name: '',
     category: 'REGULAR',
@@ -127,10 +127,14 @@ function resetForm() {
   dayTimes.value = {}
   currentDayTimes.value = { startTime: '08:00', endTime: '20:00' }
   editingStaff.value = null
-  showCreateForm.value = false
   staffModalTab.value = 'details'
   resetAllocationForm()
   error.value = null
+}
+
+function resetForm() {
+  resetFormData()
+  showCreateForm.value = false
 }
 
 function resetAllocationForm() {
@@ -142,8 +146,14 @@ function resetAllocationForm() {
 }
 
 function openCreateForm() {
-  resetForm()
+  console.log('openCreateForm called - before:', showCreateForm.value)
+  resetFormData()
   showCreateForm.value = true
+  console.log('openCreateForm called - after:', showCreateForm.value)
+  // Force a nextTick to ensure reactivity
+  nextTick(() => {
+    console.log('nextTick - showCreateForm:', showCreateForm.value)
+  })
 }
 
 function openEditForm(staff: Staff) {
@@ -317,6 +327,7 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 
     <!-- Staff Form Modal -->
     <Modal :show="showCreateForm" :title="formTitle" size="lg" @close="resetForm">
+      <!-- Debug: {{ showCreateForm }} -->
       <div v-if="error" class="error-message">
         {{ error }}
       </div>
@@ -582,6 +593,8 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
         </button>
       </template>
     </Modal>
+
+    <!-- Debug: showCreateForm = {{ showCreateForm }} -->
 
     <div class="staff-header">
       <nav class="staff-tabs">

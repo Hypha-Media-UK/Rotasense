@@ -81,15 +81,19 @@ function getDepartmentScheduleDisplay(department: Department): string {
 }
 
 // Building methods
-function resetBuildingForm() {
+function resetBuildingFormData() {
   newBuilding.value = { name: '' }
   editingBuilding.value = null
-  showBuildingForm.value = false
   error.value = null
 }
 
+function resetBuildingForm() {
+  resetBuildingFormData()
+  showBuildingForm.value = false
+}
+
 function openBuildingForm() {
-  resetBuildingForm()
+  resetBuildingFormData()
   showBuildingForm.value = true
 }
 
@@ -140,7 +144,7 @@ async function deleteBuilding(building: Building) {
 }
 
 // Department methods
-function resetDepartmentForm() {
+function resetDepartmentFormData() {
   newDepartment.value = {
     name: '',
     buildingId: 0,
@@ -156,12 +160,16 @@ function resetDepartmentForm() {
   currentDeptDayTimes.value = { startTime: '08:00', endTime: '20:00' }
   editingDepartment.value = null
   selectedBuildingForDept.value = null
-  showDepartmentForm.value = false
   error.value = null
 }
 
+function resetDepartmentForm() {
+  resetDepartmentFormData()
+  showDepartmentForm.value = false
+}
+
 function openDepartmentForm(buildingId?: number) {
-  resetDepartmentForm()
+  resetDepartmentFormData()
   if (buildingId) {
     newDepartment.value.buildingId = buildingId
     selectedBuildingForDept.value = buildingId

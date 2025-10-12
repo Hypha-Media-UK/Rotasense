@@ -69,7 +69,7 @@ function getServiceScheduleDisplay(service: Service): string {
 }
 
 // Methods
-function resetForm() {
+function resetFormData() {
   newService.value = {
     name: '',
     is24x7: false,
@@ -83,12 +83,16 @@ function resetForm() {
   serviceDayTimes.value = {}
   currentServiceDayTimes.value = { startTime: '08:00', endTime: '20:00' }
   editingService.value = null
-  showServiceForm.value = false
   error.value = null
 }
 
+function resetForm() {
+  resetFormData()
+  showServiceForm.value = false
+}
+
 function openCreateForm() {
-  resetForm()
+  resetFormData()
   showServiceForm.value = true
 }
 
