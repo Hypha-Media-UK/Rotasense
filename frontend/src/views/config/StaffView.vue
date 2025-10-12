@@ -922,27 +922,38 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   font-weight: 500;
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 0.5rem 0;
   border-radius: 6px;
   transition: background-color 0.2s;
+  justify-content: flex-start;
+  width: fit-content;
+  flex-direction: row;
 }
 
 .checkbox-label:hover {
   background: #f3f4f6;
+  padding: 0.5rem;
+  margin: -0.5rem 0;
 }
 
 .checkbox {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1rem;
+  height: 1rem;
   accent-color: #3b82f6;
+  margin: 0;
+  flex-shrink: 0;
+  order: 1;
 }
 
 .checkbox-text {
   font-size: 0.875rem;
   color: #374151;
+  margin: 0;
+  order: 2;
+  white-space: nowrap;
 }
 
 /* Schedule Type Options */
