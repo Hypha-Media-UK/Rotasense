@@ -422,6 +422,13 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
   text-align: left;
 }
 
+/* Override global article hover effects for config content */
+.config-content:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: initial !important;
+}
+
 /* Service Modal Styling */
 .service-modal-content {
   max-height: 70vh;

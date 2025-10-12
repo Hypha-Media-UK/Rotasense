@@ -771,6 +771,13 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 .content-header h2 {
   text-align: left;
 }
+
+/* Override global article hover effects for config content */
+.config-content:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: initial !important;
+}
 </style>
 
 

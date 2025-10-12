@@ -750,6 +750,13 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
   text-align: left;
 }
 
+/* Override global article hover effects for config content */
+.config-content:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: initial !important;
+}
+
 .staff-header {
   display: flex;
   justify-content: space-between;
