@@ -307,13 +307,11 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 </script>
 
 <template>
-  <div class="staff-view">
-    <div class="staff-header">
-      <h2 class="text-xl font-semibold">Staff Management</h2>
-      <div class="actions">
-        <button @click="openCreateForm" class="btn btn-primary">Add Staff Member</button>
-      </div>
-    </div>
+  <article>
+    <header>
+      <h2>Staff Management</h2>
+      <button @click="openCreateForm">Add Staff Member</button>
+    </header>
 
     <!-- Staff Form Modal -->
     <Modal :show="showCreateForm" :title="formTitle" size="lg" @close="resetForm">
@@ -570,407 +568,71 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
       </template>
     </Modal>
 
-    <!-- Staff Category Tabs -->
-    <div class="staff-tabs">
-      <div class="tabs">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          @click="activeTab = tab.key"
-          class="tab"
-          :class="{ active: activeTab === tab.key }"
-        >
-          {{ tab.label }} ({{ tab.staff.length }})
-        </button>
-      </div>
-    </div>
+    <nav>
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        @click="activeTab = tab.key"
+        :class="{ active: activeTab === tab.key }"
+      >
+        {{ tab.label }} ({{ tab.staff.length }})
+      </button>
+    </nav>
 
-    <div v-if="configStore.loading" class="loading-state">
+    <div v-if="configStore.loading">
       <p>Loading staff...</p>
     </div>
 
-    <div v-else-if="configStore.error" class="error-state">
-      <p class="text-error">{{ configStore.error }}</p>
+    <div v-else-if="configStore.error">
+      <p>{{ configStore.error }}</p>
     </div>
 
-    <div v-else class="staff-content">
-      <div
+    <section v-else>
+      <section
         v-for="tab in tabs"
         :key="tab.key"
         v-show="activeTab === tab.key"
-        class="staff-list"
       >
-        <div v-if="tab.staff.length === 0" class="empty-state">
-          <p class="text-muted">No {{ tab.label.toLowerCase() }} staff members yet.</p>
-          <button @click="openCreateForm" class="btn btn-primary">Add {{ tab.label }} Staff Member</button>
+        <div v-if="tab.staff.length === 0">
+          <p>No {{ tab.label.toLowerCase() }} staff members yet.</p>
+          <button @click="openCreateForm">Add {{ tab.label }} Staff Member</button>
         </div>
 
-        <div v-else class="staff-grid">
-          <div
+        <div v-else>
+          <article
             v-for="staff in tab.staff"
             :key="staff.id"
-            class="staff-card card"
           >
-            <div class="staff-header">
-              <h3 class="staff-name">{{ staff.name }}</h3>
-              <div class="staff-actions">
-                <button @click="openEditForm(staff)" class="btn btn-sm">Edit</button>
-                <button @click="deleteStaff(staff)" class="btn btn-sm btn-danger">Delete</button>
+            <header>
+              <h3>{{ staff.name }}</h3>
+              <div>
+                <button @click="openEditForm(staff)">Edit</button>
+                <button @click="deleteStaff(staff)">Delete</button>
               </div>
-            </div>
+            </header>
 
-            <div class="staff-details">
-              <div class="staff-info">
-                <span class="staff-hours">
-                  {{ getStaffScheduleDisplay(staff) }}
-                </span>
-                <span class="staff-days">
-                  {{ staff.scheduleType === 'SHIFT_CYCLE' ? 'Rotating Schedule' : `${staff.contractedDays.length} days/week` }}
-                </span>
-                <span class="staff-category">
-                  {{ staff.category }}
-                </span>
-              </div>
+            <div>
+              <time>{{ getStaffScheduleDisplay(staff) }}</time>
+              <span>{{ staff.scheduleType === 'SHIFT_CYCLE' ? 'Rotating Schedule' : `${staff.contractedDays.length} days/week` }}</span>
+              <span>{{ staff.category }}</span>
 
-              <div class="staff-allocations">
-                <div v-if="!staff.allocations || staff.allocations.length === 0" class="no-allocations">
-                  No allocations
-                </div>
-                <div v-else class="allocations-list">
-                  <div v-for="allocation in staff.allocations" :key="allocation.id" class="allocation-item">
-                    <div class="allocation-location">
-                      <strong v-if="allocation.department">{{ allocation.department.name }}</strong>
-                      <strong v-else-if="allocation.service">{{ allocation.service.name }}</strong>
-                    </div>
-                  </div>
-                </div>
+              <div v-if="!staff.allocations || staff.allocations.length === 0">
+                No allocations
               </div>
+              <ul v-else>
+                <li v-for="allocation in staff.allocations" :key="allocation.id">
+                  <strong v-if="allocation.department">{{ allocation.department.name }}</strong>
+                  <strong v-else-if="allocation.service">{{ allocation.service.name }}</strong>
+                </li>
+              </ul>
             </div>
-          </div>
+          </article>
         </div>
-      </div>
-    </div>
-  </div>
+      </section>
+    </section>
+  </article>
 </template>
 
-<style scoped>
-.staff-view {
-  display: grid;
-  gap: var(--space-lg);
-}
-
-.staff-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.staff-tabs {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.tabs {
-  display: flex;
-}
-
-.tab {
-  flex: 1;
-  padding: var(--space-md) var(--space-lg);
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.tab:hover {
-  color: var(--color-text);
-  background-color: var(--color-background);
-}
-
-.tab.active {
-  color: var(--color-text);
-  border-bottom-color: var(--color-primary);
-  background-color: var(--color-background);
-}
-
-.loading-state,
-.error-state {
-  text-align: center;
-  padding: var(--space-xl);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
-.staff-content {
-  min-height: 200px;
-}
-
-.staff-list {
-  display: grid;
-  gap: var(--space-lg);
-}
 
 
 
-.staff-grid {
-  display: grid;
-  gap: var(--space-md);
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-}
-
-.staff-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.staff-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.staff-name {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.staff-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.staff-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-md);
-}
-
-.staff-info {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.staff-hours,
-.staff-days,
-.staff-category {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.staff-allocations {
-  margin-top: var(--space-sm);
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--color-border);
-}
-
-.no-allocations {
-  color: var(--color-text-muted);
-  font-style: italic;
-  font-size: var(--font-size-sm);
-}
-
-.allocations-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.allocation-item {
-  padding: var(--space-xs);
-  background: var(--color-surface);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-}
-
-.allocation-location {
-  font-weight: 500;
-  margin-bottom: var(--space-xs);
-}
-
-.allocation-details {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.allocation-days {
-  text-transform: capitalize;
-}
-
-.allocation-time {
-  font-family: var(--font-mono);
-}
-
-.allocation-type-selector {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: var(--space-md);
-}
-
-@media (max-width: 768px) {
-  .allocation-type-selector {
-    grid-template-columns: 1fr;
-  }
-}
-
-.shift-type-info {
-  padding: var(--space-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  margin: var(--space-md) 0;
-}
-
-.shift-type-info .info-text {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
-.btn-sm {
-  padding: var(--space-xs) var(--space-sm);
-  font-size: var(--font-size-sm);
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .staff-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .staff-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
-  }
-
-  .staff-header .staff-actions {
-    justify-content: center;
-  }
-
-  .staff-details {
-    flex-direction: column;
-    gap: var(--space-sm);
-  }
-
-  .tabs {
-    flex-direction: column;
-  }
-
-  .tab {
-    text-align: center;
-  }
-}
-
-/* Modal Form Styles */
-.error-message {
-  padding: var(--space-sm);
-  background-color: var(--color-error-bg);
-  color: var(--color-error);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--space-md);
-}
-
-.form {
-  display: grid;
-  gap: var(--space-md);
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.form-label {
-  font-weight: 500;
-  color: var(--color-text);
-  font-size: var(--font-size-sm);
-}
-
-.form-input,
-.form-select {
-  padding: var(--space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  transition: border-color 0.2s ease;
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.time-range {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-}
-
-.time-input {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-/* Shift cycle configuration */
-.shift-cycle-config {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-  margin-top: var(--space-sm);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-}
-
-@media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.btn-danger {
-  background-color: var(--color-error);
-  color: var(--color-text-inverse);
-}
-
-.btn-danger:hover {
-  background-color: var(--color-error-hover);
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .time-range {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

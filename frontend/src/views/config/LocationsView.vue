@@ -266,14 +266,14 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 </script>
 
 <template>
-  <div class="locations-view">
-    <div class="locations-header">
-      <h2 class="text-xl font-semibold">Buildings & Departments</h2>
-      <div class="actions">
-        <button @click="openDepartmentForm()" class="btn">Add Department</button>
-        <button @click="openBuildingForm" class="btn btn-primary">Add Building</button>
+  <article>
+    <header>
+      <h2>Buildings & Departments</h2>
+      <div>
+        <button @click="openDepartmentForm()">Add Department</button>
+        <button @click="openBuildingForm">Add Building</button>
       </div>
-    </div>
+    </header>
 
     <!-- Building Form Modal -->
     <Modal :show="showBuildingForm" :title="buildingFormTitle" size="sm" @close="resetBuildingForm">
@@ -414,333 +414,62 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
       </template>
     </Modal>
 
-    <div v-if="configStore.loading" class="loading-state">
+    <div v-if="configStore.loading">
       <p>Loading locations...</p>
     </div>
 
-    <div v-else-if="configStore.error" class="error-state">
-      <p class="text-error">{{ configStore.error }}</p>
+    <div v-else-if="configStore.error">
+      <p>{{ configStore.error }}</p>
     </div>
 
-    <div v-else class="buildings-grid">
-      <div v-if="buildingsWithDepartments.length === 0" class="empty-state">
-        <p class="text-muted">No buildings configured yet.</p>
-        <button @click="openBuildingForm" class="btn btn-primary">Create Your First Building</button>
+    <section v-else>
+      <div v-if="buildingsWithDepartments.length === 0">
+        <p>No buildings configured yet.</p>
+        <button @click="openBuildingForm">Create Your First Building</button>
       </div>
 
-      <div
+      <article
         v-for="building in buildingsWithDepartments"
         :key="building.id"
-        class="building-card card"
       >
-        <div class="building-header">
-          <h3 class="building-name">{{ building.name }}</h3>
-          <div class="building-actions">
-            <button @click="openEditBuildingForm(building)" class="btn">Edit</button>
-            <button @click="openDepartmentForm(building.id)" class="btn">Add Department</button>
-            <button @click="deleteBuilding(building)" class="btn btn-danger btn-sm">Delete</button>
+        <header>
+          <h3>{{ building.name }}</h3>
+          <div>
+            <button @click="openEditBuildingForm(building)">Edit</button>
+            <button @click="openDepartmentForm(building.id)">Add Department</button>
+            <button @click="deleteBuilding(building)">Delete</button>
           </div>
-        </div>
+        </header>
 
-        <div v-if="building.departments.length > 0" class="departments-list">
-          <h4 class="departments-title">Departments ({{ building.departments.length }})</h4>
-          <div class="departments-grid">
-            <div
+        <section v-if="building.departments.length > 0">
+          <h4>Departments ({{ building.departments.length }})</h4>
+          <ul>
+            <li
               v-for="department in building.departments"
               :key="department.id"
-              class="department-item"
             >
-              <div class="department-info">
-                <span class="department-name">{{ department.name }}</span>
-                <span class="department-hours">
-                  {{ getDepartmentScheduleDisplay(department) }}
-                </span>
-                <span class="department-days">
-                  {{ department.operationalDays.length }} days/week
-                </span>
+              <div>
+                <span>{{ department.name }}</span>
+                <time>{{ getDepartmentScheduleDisplay(department) }}</time>
+                <span>{{ department.operationalDays.length }} days/week</span>
               </div>
-              <div class="department-actions">
-                <button @click="openEditDepartmentForm(department)" class="btn btn-sm">Edit</button>
-                <button @click="deleteDepartment(department)" class="btn btn-sm btn-danger">Delete</button>
+              <div>
+                <button @click="openEditDepartmentForm(department)">Edit</button>
+                <button @click="deleteDepartment(department)">Delete</button>
               </div>
-            </div>
-          </div>
-        </div>
+            </li>
+          </ul>
+        </section>
 
-        <div v-else class="no-departments">
-          <p class="text-muted text-sm">No departments in this building</p>
-          <button @click="openDepartmentForm(building.id)" class="btn btn-sm">Add First Department</button>
+        <div v-else>
+          <p>No departments in this building</p>
+          <button @click="openDepartmentForm(building.id)">Add First Department</button>
         </div>
-      </div>
-    </div>
-  </div>
+      </article>
+    </section>
+  </article>
 </template>
 
-<style scoped>
-.locations-view {
-  display: grid;
-  gap: var(--space-lg);
-}
-
-.locations-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.loading-state,
-.error-state {
-  text-align: center;
-  padding: var(--space-xl);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
-.buildings-grid {
-  display: grid;
-  gap: var(--space-lg);
-}
 
 
 
-.building-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.building-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.building-name {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.building-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.departments-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.departments-title {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.departments-grid {
-  display: grid;
-  gap: var(--space-sm);
-}
-
-.department-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-sm);
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.department-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.department-name {
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.department-hours,
-.department-days {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.department-actions {
-  display: flex;
-  gap: var(--space-xs);
-}
-
-.no-departments {
-  text-align: center;
-  padding: var(--space-md);
-  background-color: var(--color-background);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  align-items: center;
-}
-
-.btn-sm {
-  padding: var(--space-xs) var(--space-sm);
-  font-size: var(--font-size-sm);
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .locations-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
-  }
-
-  .building-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
-  }
-
-  .building-actions {
-    justify-content: center;
-  }
-
-  .department-item {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
-  }
-
-  .department-actions {
-    justify-content: center;
-  }
-}
-
-/* Form Styles */
-.building-form,
-.department-form {
-  margin-bottom: var(--space-lg);
-}
-
-.form-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: var(--space-lg);
-}
-
-.error-message {
-  padding: var(--space-sm);
-  background-color: var(--color-error-bg);
-  color: var(--color-error);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--space-md);
-}
-
-.form {
-  display: grid;
-  gap: var(--space-md);
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.form-label {
-  font-weight: 500;
-  color: var(--color-text);
-  font-size: var(--font-size-sm);
-}
-
-.form-input,
-.form-select {
-  padding: var(--space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  transition: border-color 0.2s ease;
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.time-range {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-}
-
-.time-input {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-}
-
-.checkbox {
-  width: 16px;
-  height: 16px;
-}
-
-.form-actions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--color-border);
-}
-
-.btn-danger {
-  background-color: var(--color-error);
-  color: var(--color-text-inverse);
-}
-
-.btn-danger:hover {
-  background-color: var(--color-error-hover);
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .time-range {
-    grid-template-columns: 1fr;
-  }
-
-  .days-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-}
-</style>

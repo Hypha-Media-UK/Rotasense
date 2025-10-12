@@ -16,7 +16,7 @@ onMounted(() => {
 <template>
   <div id="app">
     <AppHeader />
-    <main class="container">
+    <main>
       <ErrorBoundary>
         <RouterView />
       </ErrorBoundary>
@@ -24,33 +24,4 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
-#app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
 
-main {
-  flex: 1;
-  padding: var(--space-lg) 0;
-  width: 100%;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 var(--space-md);
-  width: 100%;
-}
-
-@media (max-width: 768px) {
-  main {
-    padding: var(--space-md) 0;
-  }
-
-  .container {
-    padding: 0 var(--space-sm);
-  }
-}
-</style>

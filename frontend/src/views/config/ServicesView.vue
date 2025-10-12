@@ -183,13 +183,11 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 </script>
 
 <template>
-  <div class="services-view">
-    <div class="services-header">
-      <h2 class="text-xl font-semibold">Services</h2>
-      <div class="actions">
-        <button @click="openCreateForm" class="btn btn-primary">Add Service</button>
-      </div>
-    </div>
+  <article>
+    <header>
+      <h2>Services</h2>
+      <button @click="openCreateForm">Add Service</button>
+    </header>
 
     <!-- Service Form Modal -->
     <Modal :show="showServiceForm" :title="formTitle" size="lg" @close="resetForm">
@@ -292,284 +290,46 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
       </template>
     </Modal>
 
-    <div v-if="configStore.loading" class="loading-state">
+    <div v-if="configStore.loading">
       <p>Loading services...</p>
     </div>
 
-    <div v-else-if="configStore.error" class="error-state">
-      <p class="text-error">{{ configStore.error }}</p>
+    <div v-else-if="configStore.error">
+      <p>{{ configStore.error }}</p>
     </div>
 
-    <div v-else class="services-grid">
-      <div v-if="configStore.services.length === 0" class="empty-state">
-        <p class="text-muted">No services configured yet.</p>
-        <button @click="openCreateForm" class="btn btn-primary">Create Your First Service</button>
+    <section v-else>
+      <div v-if="configStore.services.length === 0">
+        <p>No services configured yet.</p>
+        <button @click="openCreateForm">Create Your First Service</button>
       </div>
 
-      <div
+      <article
         v-for="service in configStore.services"
         :key="service.id"
-        class="service-card card"
       >
-        <div class="service-header">
-          <h3 class="service-name">{{ service.name }}</h3>
-          <div class="service-actions">
-            <button @click="openEditForm(service)" class="btn">Edit</button>
-            <button @click="deleteService(service)" class="btn btn-danger">Delete</button>
+        <header>
+          <h3>{{ service.name }}</h3>
+          <div>
+            <button @click="openEditForm(service)">Edit</button>
+            <button @click="deleteService(service)">Delete</button>
           </div>
-        </div>
+        </header>
 
-        <div class="service-details">
-          <div class="service-info">
-            <span class="service-hours">
-              {{ getServiceScheduleDisplay(service) }}
-            </span>
-            <span class="service-days">
-              {{ service.operationalDays.length }} days/week
-            </span>
-            <span class="service-staff">
-              Min {{ service.minStaff }} staff required
-            </span>
-          </div>
+        <div>
+          <time>{{ getServiceScheduleDisplay(service) }}</time>
+          <span>{{ service.operationalDays.length }} days/week</span>
+          <span>Min {{ service.minStaff }} staff required</span>
 
-          <div class="service-status">
-            <span
-              class="status"
-              :class="service.displayOnHome ? 'status-active' : 'status-off-duty'"
-            >
-              {{ service.displayOnHome ? 'Visible on Home' : 'Hidden from Home' }}
-            </span>
-          </div>
+          <span :class="service.displayOnHome ? 'status-active' : 'status-off-duty'">
+            {{ service.displayOnHome ? 'Visible on Home' : 'Hidden from Home' }}
+          </span>
         </div>
-      </div>
-    </div>
-  </div>
+      </article>
+    </section>
+  </article>
 </template>
 
-<style scoped>
-.services-view {
-  display: grid;
-  gap: var(--space-lg);
-}
-
-.services-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.loading-state,
-.error-state {
-  text-align: center;
-  padding: var(--space-xl);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
-.services-grid {
-  display: grid;
-  gap: var(--space-md);
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-}
-
-.empty-state {
-  grid-column: 1 / -1;
-}
-
-.service-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.service-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.service-name {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.service-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.service-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-md);
-}
-
-.service-info {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.service-hours,
-.service-days,
-.service-staff {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.service-status {
-  display: flex;
-  align-items: center;
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .services-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .services-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
-  }
-
-  .service-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-sm);
-  }
-
-  .service-actions {
-    justify-content: center;
-  }
-
-  .service-details {
-    flex-direction: column;
-    gap: var(--space-sm);
-  }
-}
-
-/* Form Styles */
-.service-form {
-  margin-bottom: var(--space-lg);
-}
-
-.form-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: var(--space-lg);
-}
-
-.error-message {
-  padding: var(--space-sm);
-  background-color: var(--color-error-bg);
-  color: var(--color-error);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--space-md);
-}
-
-.form {
-  display: grid;
-  gap: var(--space-md);
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.form-label {
-  font-weight: 500;
-  color: var(--color-text);
-  font-size: var(--font-size-sm);
-}
-
-.form-input,
-.form-select {
-  padding: var(--space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  transition: border-color 0.2s ease;
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.time-range {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-}
-
-.time-input {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
 
 
 
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-}
-
-.checkbox {
-  width: 16px;
-  height: 16px;
-}
-
-.form-actions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--color-border);
-}
-
-.btn-danger {
-  background-color: var(--color-error);
-  color: var(--color-text-inverse);
-}
-
-.btn-danger:hover {
-  background-color: var(--color-error-hover);
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .time-range {
-    grid-template-columns: 1fr;
-  }
-
-  .days-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-}
-</style>
