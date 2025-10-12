@@ -264,5 +264,8 @@ function deleteZeroStartDate(id: string) {
   </article>
 </template>
 
-
-
+<style scoped>
+.content-header h2 {
+  text-align: left;
+}
+</style>

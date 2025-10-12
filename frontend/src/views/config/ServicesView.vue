@@ -385,4 +385,8 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 .service-details {
   color: #9ca3af;
 }
+
+.content-header h2 {
+  text-align: left;
+}
 </style>

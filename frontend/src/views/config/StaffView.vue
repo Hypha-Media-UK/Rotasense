@@ -703,6 +703,10 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 .staff-allocations {
   color: #9ca3af;
 }
+
+.content-header h2 {
+  text-align: left;
+}
 </style>
 
 
