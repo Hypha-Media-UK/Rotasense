@@ -199,91 +199,123 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
         {{ error }}
       </div>
 
-      <form @submit.prevent="saveService" class="form">
-        <div class="form-group">
-          <label class="form-label">Service Name</label>
-          <input
-            v-model="newService.name"
-            type="text"
-            class="form-input"
-            placeholder="Enter service name"
-            required
-          >
-        </div>
+      <div class="service-modal-content">
+        <form @submit.prevent="saveService" class="service-form">
 
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input
-              v-model="newService.is24x7"
-              type="checkbox"
-              class="checkbox"
-            >
-            24/7 Operation
-          </label>
-          <p class="form-help">Check this if the service operates 24 hours a day, 7 days a week.</p>
-        </div>
+          <!-- Basic Information Section -->
+          <div class="form-section">
+            <h3 class="section-title">Basic Information</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Service Name</label>
+                <input
+                  v-model="newService.name"
+                  type="text"
+                  class="form-input"
+                  placeholder="Enter service name"
+                  required
+                >
+              </div>
 
-        <div v-if="!newService.is24x7" class="form-group">
-          <label class="form-label">Operational Days</label>
-          <p class="form-help">Click to activate/select days. Click again to deactivate.</p>
-          <div class="days-grid">
-            <button
-              v-for="day in daysOfWeek"
-              :key="day"
-              type="button"
-              @click="handleServiceDayClick(day)"
-              class="day-button"
-              :class="{
-                active: newService.operationalDays.includes(day),
-                selected: selectedServiceDay === day && newService.operationalDays.includes(day)
-              }"
-            >
-              {{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Time Inputs for Selected Day -->
-        <div v-if="!newService.is24x7 && selectedServiceDay && newService.operationalDays.includes(selectedServiceDay)" class="form-group">
-          <label class="form-label">{{ formatDayName(selectedServiceDay) }} Service Hours</label>
-          <div class="time-inputs">
-            <div class="time-input">
-              <label class="form-label">Start Time</label>
-              <input
-                v-model="currentServiceDayTimes.startTime"
-                @input="updateServiceDayTimes"
-                type="time"
-                class="form-input"
-                required
-              >
-            </div>
-            <div class="time-input">
-              <label class="form-label">End Time</label>
-              <input
-                v-model="currentServiceDayTimes.endTime"
-                @input="updateServiceDayTimes"
-                type="time"
-                class="form-input"
-                required
-              >
+              <div class="form-group">
+                <label class="form-label">Minimum Staff Required</label>
+                <input
+                  v-model.number="newService.minStaff"
+                  type="number"
+                  min="1"
+                  class="form-input"
+                  placeholder="e.g., 2"
+                  required
+                >
+                <p class="form-help">Minimum number of staff needed for this service</p>
+              </div>
             </div>
           </div>
-        </div>
 
+          <!-- Operation Schedule Section -->
+          <div class="form-section">
+            <h3 class="section-title">Operation Schedule</h3>
 
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  v-model="newService.is24x7"
+                  type="checkbox"
+                  class="checkbox"
+                >
+                <span class="checkbox-text">24/7 Operation</span>
+              </label>
+              <p class="form-help">Enable this if the service operates 24 hours a day, 7 days a week</p>
+            </div>
 
-        <div class="form-group">
-          <label class="form-label">Minimum Staff</label>
-          <input v-model.number="newService.minStaff" type="number" min="1" class="form-input" required>
-        </div>
+            <!-- Operational Days Configuration -->
+            <div v-if="!newService.is24x7" class="operational-days-section">
+              <h4 class="subsection-title">Operating Days</h4>
+              <p class="form-help">Select the days this service operates</p>
+              <div class="days-grid">
+                <button
+                  v-for="day in daysOfWeek"
+                  :key="day"
+                  type="button"
+                  @click="handleServiceDayClick(day)"
+                  class="day-button"
+                  :class="{
+                    active: newService.operationalDays.includes(day),
+                    selected: selectedServiceDay === day && newService.operationalDays.includes(day)
+                  }"
+                >
+                  <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
+                  <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input v-model="newService.displayOnHome" type="checkbox" class="checkbox">
-            Display on homepage (show even without staff)
-          </label>
-        </div>
-      </form>
+          <!-- Time Customization Section -->
+          <div v-if="!newService.is24x7 && selectedServiceDay && newService.operationalDays.includes(selectedServiceDay)" class="form-section">
+            <h3 class="section-title">{{ formatDayName(selectedServiceDay) }} Service Hours</h3>
+            <p class="form-help">Set operating hours for {{ formatDayName(selectedServiceDay) }}</p>
+
+            <div class="time-customization">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Start Time</label>
+                  <input
+                    v-model="currentServiceDayTimes.startTime"
+                    @input="updateServiceDayTimes"
+                    type="time"
+                    class="form-input"
+                    required
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Time</label>
+                  <input
+                    v-model="currentServiceDayTimes.endTime"
+                    @input="updateServiceDayTimes"
+                    type="time"
+                    class="form-input"
+                    required
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Display Settings Section -->
+          <div class="form-section">
+            <h3 class="section-title">Display Settings</h3>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input v-model="newService.displayOnHome" type="checkbox" class="checkbox">
+                <span class="checkbox-text">Display on Homepage</span>
+              </label>
+              <p class="form-help">Show this service on the homepage even when no staff are allocated</p>
+            </div>
+          </div>
+        </form>
+      </div>
 
       <template #footer>
         <button type="button" @click="resetForm" class="btn">Cancel</button>
@@ -388,5 +420,218 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 
 .content-header h2 {
   text-align: left;
+}
+
+/* Service Modal Styling */
+.service-modal-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.service-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section {
+  background: #fafbfc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  position: relative;
+}
+
+.section-title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 1.5rem;
+  background: #3b82f6;
+  border-radius: 2px;
+}
+
+.subsection-title {
+  margin: 1.5rem 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.form-input,
+.form-select {
+  padding: 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  background: white;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-help {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+  justify-content: flex-start;
+  width: fit-content;
+  flex-direction: row;
+}
+
+.checkbox-label:hover {
+  background: #f3f4f6;
+  padding: 0.5rem;
+  margin: -0.5rem 0;
+}
+
+.checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #3b82f6;
+  margin: 0;
+  flex-shrink: 0;
+  order: 1;
+}
+
+.checkbox-text {
+  font-size: 0.875rem;
+  color: #374151;
+  margin: 0;
+  order: 2;
+  white-space: nowrap;
+}
+
+/* Operational Days Section */
+.operational-days-section {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+/* Enhanced Days Grid */
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.day-button {
+  padding: 1rem 0.5rem;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 4rem;
+}
+
+.day-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.day-button.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.day-button.selected {
+  background: #059669;
+  border-color: #059669;
+  color: white;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.day-short {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.day-full {
+  font-size: 0.625rem;
+  opacity: 0.8;
+}
+
+/* Time Customization */
+.time-customization {
+  background: #fffbeb;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+/* Error States */
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
 }
 </style>
