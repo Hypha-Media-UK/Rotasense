@@ -15,10 +15,6 @@ onMounted(() => {
 <template>
   <article class="home-view">
     <header class="page-header">
-      <div class="page-title-section">
-        <h1>Staff Schedule</h1>
-        <p class="page-subtitle">Monitor department and service staffing levels in real-time</p>
-      </div>
       <DateNavigation />
     </header>
 
