@@ -347,160 +347,199 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
       </div>
 
       <!-- Staff Details Tab -->
-      <div v-if="staffModalTab === 'details'">
-        <form @submit.prevent="saveStaff" class="form">
-        <!-- Name -->
-        <div class="form-group">
-          <label class="form-label">Name</label>
-          <input
-            v-model="newStaff.name"
-            type="text"
-            class="form-input"
-            placeholder="Enter staff member name"
-            required
-          >
-        </div>
+      <div v-if="staffModalTab === 'details'" class="staff-details-content">
+        <form @submit.prevent="saveStaff" class="staff-form">
 
-        <!-- Category -->
-        <div class="form-group">
-          <label class="form-label">Category</label>
-          <select v-model="newStaff.category" class="form-select" required>
-            <option value="REGULAR">Regular</option>
-            <option value="RELIEF">Relief</option>
-            <option value="SUPERVISOR">Supervisor</option>
-          </select>
-        </div>
+          <!-- Basic Information Section -->
+          <div class="form-section">
+            <h3 class="section-title">Basic Information</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Staff Name</label>
+                <input
+                  v-model="newStaff.name"
+                  type="text"
+                  class="form-input"
+                  placeholder="Enter full name"
+                  required
+                >
+              </div>
 
-        <!-- Night Staff -->
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input
-              v-model="newStaff.isNightStaff"
-              type="checkbox"
-              class="checkbox"
-            >
-            Night Staff
-          </label>
-          <p class="form-help">Check this if the staff member works night shifts.</p>
-        </div>
-
-        <!-- Schedule Type -->
-        <div class="form-group">
-          <label class="form-label">Schedule Type</label>
-          <select v-model="newStaff.scheduleType" @change="onScheduleTypeChange" class="form-select" required>
-            <option value="DAILY">Daily Schedule (Fixed days each week)</option>
-            <option value="SHIFT_CYCLE">Shift Cycle (Rotating pattern)</option>
-          </select>
-        </div>
-
-        <!-- Shift Cycle Configuration (only for SHIFT_CYCLE) -->
-        <div v-if="isShiftCycleSelected" class="shift-cycle-config">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Days On</label>
-              <input v-model.number="newStaff.daysOn" type="number" min="1" max="14" class="form-input" required>
+              <div class="form-group">
+                <label class="form-label">Category</label>
+                <select v-model="newStaff.category" class="form-select" required>
+                  <option value="REGULAR">Regular Staff</option>
+                  <option value="RELIEF">Relief Staff</option>
+                  <option value="SUPERVISOR">Supervisor</option>
+                </select>
+              </div>
             </div>
+
             <div class="form-group">
-              <label class="form-label">Days Off</label>
-              <input v-model.number="newStaff.daysOff" type="number" min="1" max="14" class="form-input" required>
+              <label class="checkbox-label">
+                <input
+                  v-model="newStaff.isNightStaff"
+                  type="checkbox"
+                  class="checkbox"
+                >
+                <span class="checkbox-text">Night Shift Worker</span>
+              </label>
+              <p class="form-help">Enable this for staff members who primarily work night shifts</p>
             </div>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Group Offset</label>
-              <input v-model.number="newStaff.shiftOffset" type="number" min="0" class="form-input" required>
-              <p class="form-help">0 = Group A, 4 = Group B (for 4-on/4-off), etc.</p>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Zero Start Date</label>
-              <select v-model="newStaff.zeroStartDateId" class="form-select" required>
-                <option v-if="availableZeroStartDates.length === 0" value="" disabled>
-                  No zero start dates configured - please add one in Settings
-                </option>
-                <option v-for="zsd in availableZeroStartDates" :key="zsd.id" :value="zsd.id">
-                  {{ zsd.name }} ({{ zsd.date }})
-                </option>
-              </select>
-              <p v-if="availableZeroStartDates.length === 0" class="form-help text-error">
-                Please configure zero start dates in Settings before creating shift cycle staff.
-              </p>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Shift Start Time</label>
-              <input v-model="newStaff.defaultStartTime" type="time" class="form-input" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Shift End Time</label>
-              <input v-model="newStaff.defaultEndTime" type="time" class="form-input" required>
-            </div>
-          </div>
-        </div>
 
-        <!-- Contracted Days (only for DAILY schedule) -->
-        <div v-if="!isShiftCycleSelected" class="form-group">
-          <label class="form-label">Contracted Days</label>
-          <p class="form-help">Click to activate/select days. Click again to deactivate.</p>
-          <div class="days-grid">
-            <button
-              v-for="day in daysOfWeek"
-              :key="day"
-              type="button"
-              @click="handleDayClick(day)"
-              class="day-button"
-              :class="{
-                active: newStaff.contractedDays.includes(day as any),
-                selected: selectedDay === day && newStaff.contractedDays.includes(day as any)
-              }"
-            >
-              {{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}
-            </button>
-          </div>
-        </div>
+          <!-- Schedule Configuration Section -->
+          <div class="form-section">
+            <h3 class="section-title">Schedule Configuration</h3>
 
-        <!-- Default Time Inputs for DAILY schedule -->
-        <div v-if="!isShiftCycleSelected" class="form-group">
-          <label class="form-label">Default Working Hours</label>
-          <p class="form-help">Default times for all contracted days (can be customized per day below).</p>
-          <div class="time-inputs">
-            <div class="time-input">
-              <label class="form-label">Default Start Time</label>
-              <input v-model="newStaff.defaultStartTime" type="time" class="form-input" required>
+            <div class="form-group">
+              <label class="form-label">Schedule Type</label>
+              <div class="schedule-type-options">
+                <label class="radio-option">
+                  <input
+                    v-model="newStaff.scheduleType"
+                    type="radio"
+                    value="DAILY"
+                    @change="onScheduleTypeChange"
+                  >
+                  <div class="radio-content">
+                    <span class="radio-title">Daily Schedule</span>
+                    <span class="radio-description">Fixed days each week</span>
+                  </div>
+                </label>
+                <label class="radio-option">
+                  <input
+                    v-model="newStaff.scheduleType"
+                    type="radio"
+                    value="SHIFT_CYCLE"
+                    @change="onScheduleTypeChange"
+                  >
+                  <div class="radio-content">
+                    <span class="radio-title">Shift Cycle</span>
+                    <span class="radio-description">Rotating pattern (e.g., 4 on / 4 off)</span>
+                  </div>
+                </label>
+              </div>
             </div>
-            <div class="time-input">
-              <label class="form-label">Default End Time</label>
-              <input v-model="newStaff.defaultEndTime" type="time" class="form-input" required>
-            </div>
-          </div>
-        </div>
 
-        <!-- Time Inputs for Selected Day -->
-        <div v-if="selectedDay && newStaff.contractedDays.includes(selectedDay)" class="form-group">
-          <label class="form-label">{{ formatDayName(selectedDay) }} Working Hours</label>
-          <div class="time-inputs">
-            <div class="time-input">
-              <label class="form-label">Start Time</label>
-              <input
-                v-model="currentDayTimes.startTime"
-                @input="updateDayTimes"
-                type="time"
-                class="form-input"
-                required
-              >
+            <!-- Shift Cycle Configuration -->
+            <div v-if="isShiftCycleSelected" class="shift-cycle-section">
+              <h4 class="subsection-title">Rotation Pattern</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Days On Duty</label>
+                  <input v-model.number="newStaff.daysOn" type="number" min="1" max="14" class="form-input" required>
+                  <p class="form-help">Number of consecutive working days</p>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Days Off Duty</label>
+                  <input v-model.number="newStaff.daysOff" type="number" min="1" max="14" class="form-input" required>
+                  <p class="form-help">Number of consecutive days off</p>
+                </div>
+              </div>
+
+              <h4 class="subsection-title">Group Assignment</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Group Offset</label>
+                  <input v-model.number="newStaff.shiftOffset" type="number" min="0" class="form-input" required>
+                  <p class="form-help">0 = Group A, {{ newStaff.daysOn }} = Group B, etc.</p>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Zero Start Date</label>
+                  <select v-model="newStaff.zeroStartDateId" class="form-select" required>
+                    <option v-if="availableZeroStartDates.length === 0" value="" disabled>
+                      No zero start dates configured
+                    </option>
+                    <option v-for="zsd in availableZeroStartDates" :key="zsd.id" :value="zsd.id">
+                      {{ zsd.name }} ({{ zsd.date }})
+                    </option>
+                  </select>
+                  <p v-if="availableZeroStartDates.length === 0" class="form-help text-error">
+                    Configure zero start dates in Settings first
+                  </p>
+                </div>
+              </div>
+
+              <h4 class="subsection-title">Default Shift Times</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Start Time</label>
+                  <input v-model="newStaff.defaultStartTime" type="time" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Time</label>
+                  <input v-model="newStaff.defaultEndTime" type="time" class="form-input" required>
+                </div>
+              </div>
             </div>
-            <div class="time-input">
-              <label class="form-label">End Time</label>
-              <input
-                v-model="currentDayTimes.endTime"
-                @input="updateDayTimes"
-                type="time"
-                class="form-input"
-                required
-              >
+
+            <!-- Daily Schedule Configuration -->
+            <div v-if="!isShiftCycleSelected" class="daily-schedule-section">
+              <h4 class="subsection-title">Working Days</h4>
+              <p class="form-help">Select the days this staff member is contracted to work</p>
+              <div class="days-grid">
+                <button
+                  v-for="day in daysOfWeek"
+                  :key="day"
+                  type="button"
+                  @click="handleDayClick(day)"
+                  class="day-button"
+                  :class="{
+                    active: newStaff.contractedDays.includes(day as any),
+                    selected: selectedDay === day && newStaff.contractedDays.includes(day as any)
+                  }"
+                >
+                  <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
+                  <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
+                </button>
+              </div>
+
+              <h4 class="subsection-title">Default Working Hours</h4>
+              <p class="form-help">Set default times for all working days (can be customized per day below)</p>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Default Start Time</label>
+                  <input v-model="newStaff.defaultStartTime" type="time" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Default End Time</label>
+                  <input v-model="newStaff.defaultEndTime" type="time" class="form-input" required>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+          <!-- Time Customization Section -->
+          <div v-if="selectedDay && newStaff.contractedDays.includes(selectedDay) && !isShiftCycleSelected" class="form-section">
+            <h3 class="section-title">{{ formatDayName(selectedDay) }} Time Customization</h3>
+            <p class="form-help">Customize working hours for {{ formatDayName(selectedDay) }}</p>
+
+            <div class="time-customization">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Start Time</label>
+                  <input
+                    v-model="currentDayTimes.startTime"
+                    @input="updateDayTimes"
+                    type="time"
+                    class="form-input"
+                    required
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Time</label>
+                  <input
+                    v-model="currentDayTimes.endTime"
+                    @input="updateDayTimes"
+                    type="time"
+                    class="form-input"
+                    required
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
 
@@ -588,17 +627,20 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
     </Modal>
 
     <div class="staff-header">
-      <nav class="staff-tabs">
+      <div class="staff-tabs">
         <button
           v-for="tab in tabs"
           :key="tab.key"
           @click="activeTab = tab.key"
           :class="{ active: activeTab === tab.key }"
+          class="tab-button"
         >
           {{ tab.label }} ({{ tab.staff.length }})
         </button>
-      </nav>
-      <button @click="openCreateForm" class="btn-primary">Add Staff Member</button>
+      </div>
+      <div class="staff-header-actions">
+        <button @click="openCreateForm" class="btn-primary">Add Staff Member</button>
+      </div>
     </div>
 
     <div v-if="configStore.loading">
@@ -706,6 +748,409 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 
 .content-header h2 {
   text-align: left;
+}
+
+.staff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.staff-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.staff-header-actions {
+  flex-shrink: 0;
+}
+
+.tab-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.tab-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.tab-button.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+/* Staff Modal Styling */
+.staff-details-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1rem;
+}
+
+.modal-tabs .tab {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.modal-tabs .tab:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.modal-tabs .tab.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.modal-tabs .tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f4f6;
+}
+
+/* Enhanced Form Styling */
+.staff-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section {
+  background: #fafbfc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  position: relative;
+}
+
+.section-title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 1.5rem;
+  background: #3b82f6;
+  border-radius: 2px;
+}
+
+.subsection-title {
+  margin: 1.5rem 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.form-input,
+.form-select {
+  padding: 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  background: white;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-help {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.checkbox-label:hover {
+  background: #f3f4f6;
+}
+
+.checkbox {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: #3b82f6;
+}
+
+.checkbox-text {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+/* Schedule Type Options */
+.schedule-type-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.radio-option:hover {
+  border-color: #3b82f6;
+  background: #f8faff;
+}
+
+.radio-option input[type="radio"] {
+  margin-top: 0.125rem;
+  accent-color: #3b82f6;
+}
+
+.radio-option input[type="radio"]:checked + .radio-content {
+  color: #3b82f6;
+}
+
+.radio-option:has(input:checked) {
+  border-color: #3b82f6;
+  background: #f0f7ff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.radio-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.radio-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1.3;
+}
+
+/* Shift Cycle Section */
+.shift-cycle-section {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+/* Daily Schedule Section */
+.daily-schedule-section {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+/* Enhanced Days Grid */
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.day-button {
+  padding: 1rem 0.5rem;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 4rem;
+}
+
+.day-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.day-button.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.day-button.selected {
+  background: #059669;
+  border-color: #059669;
+  color: white;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.day-short {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.day-full {
+  font-size: 0.625rem;
+  opacity: 0.8;
+}
+
+/* Time Customization */
+.time-customization {
+  background: #fffbeb;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+/* Error States */
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.text-error {
+  color: #dc2626 !important;
+}
+
+/* Allocation Section */
+.allocation-section {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.allocation-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.allocation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.allocation-item {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.allocation-info {
+  flex: 1;
+}
+
+.allocation-info h4 {
+  margin: 0 0 0.25rem 0;
+  font-weight: 600;
+  color: #374151;
+}
+
+.allocation-info p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.allocation-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>
 
