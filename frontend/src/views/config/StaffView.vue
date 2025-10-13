@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Modal from '@/components/Modal.vue'
+import StaffDaySelection from '@/components/config/StaffDaySelection.vue'
 import type { CreateStaffForm, Staff, StaffCategory, ScheduleType, ShiftPattern, DayOfWeek, CreateAllocationForm, StaffAllocation, ZeroStartDate } from '@/types'
 
 const configStore = useConfigStore()
@@ -29,39 +30,10 @@ const newStaff = ref<CreateStaffForm>({
   runnerPoolId: null
 })
 
-// Day-based time scheduling
+// Day-based time scheduling (simplified)
 const selectedDay = ref<DayOfWeek | null>(null)
-const dayTimes = ref<Record<string, { startTime: string; endTime: string }>>({})
-const currentDayTimes = ref({ startTime: '08:00', endTime: '20:00' })
 
-// Bulk day selection for working hours
-const selectedDaysForBulk = ref<Set<DayOfWeek>>(new Set())
-const bulkTimeMode = ref(false)
-const bulkStartTime = ref('08:00')
-const bulkEndTime = ref('20:00')
 
-// Helper functions for localStorage persistence
-function getStaffTimesStorageKey(staffId: number): string {
-  return `rotasense_staff_times_${staffId}`
-}
-
-function saveStaffTimesToStorage(staffId: number, times: Record<string, { startTime: string; endTime: string }>) {
-  try {
-    localStorage.setItem(getStaffTimesStorageKey(staffId), JSON.stringify(times))
-  } catch (error) {
-    console.warn('Failed to save staff times to localStorage:', error)
-  }
-}
-
-function loadStaffTimesFromStorage(staffId: number): Record<string, { startTime: string; endTime: string }> {
-  try {
-    const stored = localStorage.getItem(getStaffTimesStorageKey(staffId))
-    return stored ? JSON.parse(stored) : {}
-  } catch (error) {
-    console.warn('Failed to load staff times from localStorage:', error)
-    return {}
-  }
-}
 
 // Allocation form state
 const newAllocation = ref<CreateAllocationForm>({
@@ -107,61 +79,12 @@ const defaultZeroStartDateId = computed(() => {
   return dates.length > 0 ? dates[0]?.id : undefined
 })
 
-// Day selection and time management
-function selectDay(day: DayOfWeek) {
-  if (selectedDay.value === day) {
-    // Deactivate if clicking the same day
-    selectedDay.value = null
-  } else {
-    // Activate new day and load its times
-    selectedDay.value = day
-    const dayTime = dayTimes.value[day]
-    if (dayTime) {
-      currentDayTimes.value = { ...dayTime }
-    } else {
-      currentDayTimes.value = {
-        startTime: newStaff.value.defaultStartTime || '08:00',
-        endTime: newStaff.value.defaultEndTime || '20:00'
-      }
-    }
-  }
-}
-
-function updateDayTimes() {
-  if (selectedDay.value) {
-    dayTimes.value[selectedDay.value] = { ...currentDayTimes.value }
-
-    // Update the staff's default times to match the current day's times
-    newStaff.value.defaultStartTime = currentDayTimes.value.startTime
-    newStaff.value.defaultEndTime = currentDayTimes.value.endTime
-
-    // Save to localStorage if editing an existing staff member
-    if (editingStaff.value) {
-      saveStaffTimesToStorage(editingStaff.value.id, dayTimes.value)
-    }
-  }
-}
-
+// Helper function for day formatting (kept for compatibility)
 function formatDayName(day: DayOfWeek): string {
   return day.charAt(0).toUpperCase() + day.slice(1, 3)
 }
 
-function getStaffDayTimeDisplay(day: DayOfWeek): string {
-  // Check if there's a specific time set for this day
-  const dayTime = dayTimes.value[day]
-  if (dayTime) {
-    return `${dayTime.startTime}-${dayTime.endTime}`
-  }
 
-  // Fall back to staff default times
-  const startTime = newStaff.value.defaultStartTime || '08:00'
-  const endTime = newStaff.value.defaultEndTime || '20:00'
-  return `${startTime}-${endTime}`
-}
-
-function hasStaffDaySpecificTime(day: DayOfWeek): boolean {
-  return !!dayTimes.value[day]
-}
 
 function getStaffScheduleDisplay(staff: Staff): string {
   if (staff.scheduleType === 'SHIFT_CYCLE') {
@@ -194,18 +117,10 @@ function resetFormData() {
     runnerPoolId: null
   }
   selectedDay.value = null
-  dayTimes.value = {}
-  currentDayTimes.value = { startTime: '08:00', endTime: '20:00' }
   editingStaff.value = null
   staffModalTab.value = 'details'
   resetAllocationForm()
   error.value = null
-
-  // Reset bulk selection state
-  selectedDaysForBulk.value.clear()
-  bulkTimeMode.value = false
-  bulkStartTime.value = '08:00'
-  bulkEndTime.value = '20:00'
 }
 
 function resetForm() {
@@ -245,18 +160,8 @@ function openEditForm(staff: Staff) {
     runnerPoolId: staff.runnerPoolId
   }
 
-  // Load saved per-day times from localStorage
-  dayTimes.value = loadStaffTimesFromStorage(staff.id)
-
   // Reset day selection
   selectedDay.value = null
-  currentDayTimes.value = { startTime: staff.defaultStartTime || '08:00', endTime: staff.defaultEndTime || '20:00' }
-
-  // Reset bulk selection state
-  selectedDaysForBulk.value.clear()
-  bulkTimeMode.value = false
-  bulkStartTime.value = staff.defaultStartTime || '08:00'
-  bulkEndTime.value = staff.defaultEndTime || '20:00'
 
   showCreateForm.value = true
 }
@@ -321,118 +226,13 @@ async function deleteStaff(staff: Staff) {
   }
 }
 
+// Simplified day click handler (no longer needed with new component)
 function handleDayClick(day: string) {
-  // If in bulk mode, don't use the old single-day logic
-  if (bulkTimeMode.value) {
-    return
-  }
-
-  const dayOfWeek = day as DayOfWeek
-  const isContracted = newStaff.value.contractedDays.includes(dayOfWeek)
-
-  if (isContracted) {
-    // If already selected for editing, deactivate the day
-    if (selectedDay.value === dayOfWeek) {
-      // Second click: deactivate the day
-      const index = newStaff.value.contractedDays.indexOf(dayOfWeek)
-      if (index > -1) {
-        newStaff.value.contractedDays.splice(index, 1)
-        selectedDay.value = null
-        delete dayTimes.value[dayOfWeek]
-      }
-    } else {
-      // First click: select for time editing
-      selectDay(dayOfWeek)
-    }
-  } else {
-    // If not contracted, add to contracted days and select for time editing
-    newStaff.value.contractedDays.push(dayOfWeek)
-    selectDay(dayOfWeek)
-  }
+  // This function is kept for compatibility but may be removed
+  // The new StaffDaySelection component handles day selection
 }
 
-// Bulk day selection functions
-function toggleBulkMode() {
-  bulkTimeMode.value = !bulkTimeMode.value
-  if (bulkTimeMode.value) {
-    // When entering bulk mode, clear single day selection
-    selectedDay.value = null
-    // Initialize bulk times with current default
-    bulkStartTime.value = newStaff.value.defaultStartTime || '08:00'
-    bulkEndTime.value = newStaff.value.defaultEndTime || '20:00'
-  } else {
-    // When exiting bulk mode, clear bulk selection
-    selectedDaysForBulk.value.clear()
-  }
-}
 
-function toggleDayForBulk(day: DayOfWeek) {
-  if (selectedDaysForBulk.value.has(day)) {
-    selectedDaysForBulk.value.delete(day)
-  } else {
-    selectedDaysForBulk.value.add(day)
-  }
-}
-
-function selectQuickPattern(pattern: 'weekdays' | 'weekend' | 'all' | 'none') {
-  selectedDaysForBulk.value.clear()
-
-  switch (pattern) {
-    case 'weekdays':
-      ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
-        selectedDaysForBulk.value.add(day as DayOfWeek)
-      })
-      break
-    case 'weekend':
-      ['saturday', 'sunday'].forEach(day => {
-        selectedDaysForBulk.value.add(day as DayOfWeek)
-      })
-      break
-    case 'all':
-      daysOfWeek.forEach(day => {
-        selectedDaysForBulk.value.add(day as DayOfWeek)
-      })
-      break
-    case 'none':
-      // Already cleared above
-      break
-  }
-}
-
-function applyBulkTimes() {
-  if (selectedDaysForBulk.value.size === 0) {
-    error.value = 'Please select at least one day to apply bulk times'
-    return
-  }
-
-  // Apply times to all selected days
-  selectedDaysForBulk.value.forEach(day => {
-    // Add to contracted days if not already there
-    if (!newStaff.value.contractedDays.includes(day)) {
-      newStaff.value.contractedDays.push(day)
-    }
-
-    // Set the specific times for this day
-    dayTimes.value[day] = {
-      startTime: bulkStartTime.value,
-      endTime: bulkEndTime.value
-    }
-  })
-
-  // Update the staff's default times to match the bulk times
-  newStaff.value.defaultStartTime = bulkStartTime.value
-  newStaff.value.defaultEndTime = bulkEndTime.value
-
-  // Save to localStorage if editing an existing staff member
-  if (editingStaff.value) {
-    saveStaffTimesToStorage(editingStaff.value.id, dayTimes.value)
-  }
-
-  // Clear selection and exit bulk mode
-  selectedDaysForBulk.value.clear()
-  bulkTimeMode.value = false
-  error.value = null
-}
 
 async function createAllocation() {
   if (!editingStaff.value) {
@@ -732,104 +532,14 @@ onMounted(() => {
 
             <!-- Daily Schedule Configuration -->
             <div v-if="!isShiftCycleSelected" class="daily-schedule-section">
-              <div class="schedule-header">
-                <div>
-                  <h4 class="subsection-title">Working Days</h4>
-                  <p class="form-help">Select the days this staff member is contracted to work. Times shown below each day.</p>
-                  <p class="form-help-note">
-                    <strong>Note:</strong> Per-day times are displayed for reference but the staff member's default hours will be updated to match your most recent time setting.
-                    Individual day times are temporarily stored and will be preserved while editing this staff member.
-                  </p>
-                </div>
-                <div class="schedule-mode-toggle">
-                  <button
-                    type="button"
-                    @click="toggleBulkMode"
-                    class="bulk-mode-btn"
-                    :class="{ active: bulkTimeMode }"
-                  >
-                    {{ bulkTimeMode ? 'Exit Bulk Mode' : 'Bulk Time Setting' }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Quick Selection Patterns (only in bulk mode) -->
-              <div v-if="bulkTimeMode" class="quick-patterns">
-                <span class="quick-patterns-label">Quick select:</span>
-                <button type="button" @click="selectQuickPattern('weekdays')" class="quick-pattern-btn">
-                  Weekdays
-                </button>
-                <button type="button" @click="selectQuickPattern('weekend')" class="quick-pattern-btn">
-                  Weekend
-                </button>
-                <button type="button" @click="selectQuickPattern('all')" class="quick-pattern-btn">
-                  All Days
-                </button>
-                <button type="button" @click="selectQuickPattern('none')" class="quick-pattern-btn">
-                  Clear All
-                </button>
-              </div>
-
-              <!-- Days Grid -->
-              <div class="days-grid">
-                <div
-                  v-for="day in daysOfWeek"
-                  :key="day"
-                  class="day-container"
-                  :class="{
-                    'bulk-mode': bulkTimeMode
-                  }"
-                >
-                  <!-- Bulk Mode: Checkbox + Day Button -->
-                  <template v-if="bulkTimeMode">
-                    <label class="day-checkbox-label">
-                      <input
-                        type="checkbox"
-                        :checked="selectedDaysForBulk.has(day as DayOfWeek)"
-                        @change="toggleDayForBulk(day as DayOfWeek)"
-                        class="day-checkbox"
-                      >
-                      <div
-                        class="day-button bulk-day-button"
-                        :class="{
-                          active: newStaff.contractedDays.includes(day as any),
-                          'bulk-selected': selectedDaysForBulk.has(day as DayOfWeek),
-                          'has-custom-time': hasStaffDaySpecificTime(day as DayOfWeek)
-                        }"
-                      >
-                        <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
-                        <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
-                        <span v-if="newStaff.contractedDays.includes(day as any)" class="day-time">
-                          {{ getStaffDayTimeDisplay(day as DayOfWeek) }}
-                        </span>
-                      </div>
-                    </label>
-                  </template>
-
-                  <!-- Single Mode: Clickable Day Button -->
-                  <template v-else>
-                    <button
-                      type="button"
-                      @click="handleDayClick(day)"
-                      class="day-button"
-                      :class="{
-                        active: newStaff.contractedDays.includes(day as any),
-                        selected: selectedDay === day && newStaff.contractedDays.includes(day as any),
-                        'has-custom-time': hasStaffDaySpecificTime(day as DayOfWeek)
-                      }"
-                    >
-                      <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
-                      <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
-                      <span v-if="newStaff.contractedDays.includes(day as any)" class="day-time">
-                        {{ getStaffDayTimeDisplay(day as DayOfWeek) }}
-                      </span>
-                    </button>
-                  </template>
-                </div>
-              </div>
+              <!-- Staff Day Selection Component -->
+              <StaffDaySelection
+                v-model:contracted-days="newStaff.contractedDays"
+                :disabled="loading"
+              />
 
               <h4 class="subsection-title">Default Working Hours</h4>
-              <p class="form-help">Set default times for all working days (can be customized per day below)</p>
+              <p class="form-help">Set default times for all working days</p>
               <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label">Default Start Time</label>
@@ -843,76 +553,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Bulk Time Setting Section -->
-          <div v-if="!isShiftCycleSelected && bulkTimeMode && selectedDaysForBulk.size > 0" class="form-section">
-            <h3 class="section-title">Bulk Time Setting</h3>
-            <p class="form-help">
-              Set working hours for {{ selectedDaysForBulk.size }} selected day{{ selectedDaysForBulk.size !== 1 ? 's' : '' }}:
-              <strong>{{ Array.from(selectedDaysForBulk).map(d => formatDayName(d)).join(', ') }}</strong>
-            </p>
 
-            <div class="time-customization bulk-time-customization">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Start Time</label>
-                  <input
-                    v-model="bulkStartTime"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-                <div class="form-group">
-                  <label class="form-label">End Time</label>
-                  <input
-                    v-model="bulkEndTime"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-              </div>
-              <div class="bulk-actions">
-                <button type="button" @click="applyBulkTimes" class="btn btn-primary">
-                  Apply to Selected Days
-                </button>
-                <button type="button" @click="selectedDaysForBulk.clear()" class="btn">
-                  Clear Selection
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Single Day Time Customization Section -->
-          <div v-if="!bulkTimeMode && selectedDay && newStaff.contractedDays.includes(selectedDay) && !isShiftCycleSelected" class="form-section">
-            <h3 class="section-title">{{ formatDayName(selectedDay) }} Time Customization</h3>
-            <p class="form-help">Customize working hours for {{ formatDayName(selectedDay) }}</p>
-
-            <div class="time-customization">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Start Time</label>
-                  <input
-                    v-model="currentDayTimes.startTime"
-                    @input="updateDayTimes"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-                <div class="form-group">
-                  <label class="form-label">End Time</label>
-                  <input
-                    v-model="currentDayTimes.endTime"
-                    @input="updateDayTimes"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
 
           <!-- Runner Pool Assignment Section -->
           <div class="form-section">
