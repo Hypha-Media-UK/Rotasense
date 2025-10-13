@@ -205,39 +205,71 @@ export const useHomeStore = defineStore('home', () => {
       })
   })
 
-  // Calculate runner pool statuses
+  // Calculate runner pool statuses (separated by day/night shift)
   const runnerPoolStatuses = computed((): RunnerPoolStatus[] => {
     const configStore = useConfigStore()
 
-    return configStore.runnerPools
-      .map(runnerPool => {
-        // Get staff permanently assigned to this runner pool
-        const assignedStaff = staffStatuses.value.filter(status =>
-          status.staff.runnerPoolId === runnerPool.id
-        )
+    const results: RunnerPoolStatus[] = []
 
-        // Get staff temporarily allocated to other areas from this pool
-        const temporarilyAllocatedStaff = assignedStaff.filter(status => {
-          // Check if they have a temporary allocation override for today
+    configStore.runnerPools.forEach(runnerPool => {
+      // Get staff permanently assigned to this runner pool
+      const assignedStaff = staffStatuses.value.filter(status =>
+        status.staff.runnerPoolId === runnerPool.id
+      )
+
+      // Separate day and night staff
+      const dayStaff = assignedStaff.filter(status => !status.staff.isNightStaff)
+      const nightStaff = assignedStaff.filter(status => status.staff.isNightStaff)
+
+      // Create day shift card if there are day staff
+      if (dayStaff.length > 0) {
+        const temporarilyAllocatedStaff = dayStaff.filter(status => {
           return status.override?.overrideType === 'TEMPORARY_ALLOCATION' &&
                  (status.override.departmentId || status.override.serviceId)
         })
 
-        const activeStaff = assignedStaff.filter(status => status.isActive && !status.isAbsent).length
-        const totalStaff = assignedStaff.length
+        const activeStaff = dayStaff.filter(status => status.isActive && !status.isAbsent).length
 
-        return {
-          runnerPool,
-          assignedStaff,
+        results.push({
+          runnerPool: {
+            ...runnerPool,
+            name: runnerPool.name + ' (Day)',
+            id: runnerPool.id * 1000 + 1 // Unique ID for day shift
+          },
+          assignedStaff: dayStaff,
           temporarilyAllocatedStaff,
           activeStaff,
-          totalStaff
-        }
-      })
-      .filter(status => {
-        // Only show if marked to display on home OR has active staff
-        return status.runnerPool.displayOnHome || status.activeStaff > 0
-      })
+          totalStaff: dayStaff.length
+        })
+      }
+
+      // Create night shift card if there are night staff
+      if (nightStaff.length > 0) {
+        const temporarilyAllocatedStaff = nightStaff.filter(status => {
+          return status.override?.overrideType === 'TEMPORARY_ALLOCATION' &&
+                 (status.override.departmentId || status.override.serviceId)
+        })
+
+        const activeStaff = nightStaff.filter(status => status.isActive && !status.isAbsent).length
+
+        results.push({
+          runnerPool: {
+            ...runnerPool,
+            name: runnerPool.name + ' (Night)',
+            id: runnerPool.id * 1000 + 2 // Unique ID for night shift
+          },
+          assignedStaff: nightStaff,
+          temporarilyAllocatedStaff,
+          activeStaff,
+          totalStaff: nightStaff.length
+        })
+      }
+    })
+
+    return results.filter(status => {
+      // Only show if marked to display on home OR has active staff
+      return status.runnerPool.displayOnHome || status.activeStaff > 0
+    })
   })
 
   // Helper function to calculate shift status for staff with shift cycles
