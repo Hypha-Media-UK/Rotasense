@@ -446,7 +446,6 @@
   li {
     padding: var(--space-md);
     background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     display: flex;
     justify-content: space-between;
@@ -629,8 +628,7 @@
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-sm);
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
+    background-color: #f8f9fa;
     border-radius: var(--radius-md);
   }
 

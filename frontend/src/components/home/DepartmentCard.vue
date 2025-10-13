@@ -28,6 +28,17 @@ function isTemporaryAssignment(staffStatus: any) {
   return staffStatus.override?.overrideType === 'TEMPORARY_ALLOCATION'
 }
 
+function getDisplayTime(staffStatus: any) {
+  if (isTemporaryAssignment(staffStatus) && staffStatus.override) {
+    // Show allocation timeframe for temporary assignments
+    const startTime = staffStatus.override.startTime || staffStatus.staff.defaultStartTime
+    const endTime = staffStatus.override.endTime || staffStatus.staff.defaultEndTime
+    return `${startTime} - ${endTime}`
+  }
+  // Show contracted hours for permanent staff
+  return `${staffStatus.staff.defaultStartTime} - ${staffStatus.staff.defaultEndTime}`
+}
+
 // Computed properties for enhanced UI
 const statusClass = computed(() => {
   if (props.departmentStatus.isUnderstaffed) return 'status-understaffed'
@@ -101,7 +112,8 @@ const organizedStaff = computed(() => {
             class="staff-item"
             :class="{ 'staff-temporary': isTemporaryAssignment(staffStatus) }"
           >
-            <div class="staff-info">
+            <div class="staff-layout">
+              <!-- Name -->
               <button
                 class="staff-name clickable-staff"
                 @click="openStaffReassignmentModal(staffStatus.staff)"
@@ -109,27 +121,13 @@ const organizedStaff = computed(() => {
               >
                 {{ staffStatus.staff.name }}
               </button>
-              <span
-                v-if="isTemporaryAssignment(staffStatus)"
-                class="temporary-badge"
-                title="Temporarily assigned from runner pool"
-              >
-                Temporary
-              </span>
+
+              <!-- Cover info (if temporary assignment) -->
+              <div v-if="isTemporaryAssignment(staffStatus)" class="cover-info">
+                <span class="cover-label">Cover</span>
+                <span class="cover-timeframe">{{ getDisplayTime(staffStatus) }}</span>
+              </div>
             </div>
-            <span
-              class="status-badge"
-              :class="{
-                'status-active': staffStatus.isActive,
-                'status-scheduled': staffStatus.isScheduled && !staffStatus.isActive,
-                'status-off-duty': staffStatus.isOffDuty,
-                'status-absent': staffStatus.isAbsent
-              }"
-            >
-              <span v-if="staffStatus.isAbsent">Absent</span>
-              <span v-else-if="staffStatus.isOffDuty">Off Duty</span>
-              <span v-else>{{ staffStatus.staff.defaultStartTime }} - {{ staffStatus.staff.defaultEndTime }}</span>
-            </span>
           </li>
         </ul>
 
@@ -142,7 +140,8 @@ const organizedStaff = computed(() => {
             class="staff-item night-staff"
             :class="{ 'staff-temporary': isTemporaryAssignment(staffStatus) }"
           >
-            <div class="staff-info">
+            <div class="staff-layout">
+              <!-- Name -->
               <button
                 class="staff-name clickable-staff"
                 @click="openStaffReassignmentModal(staffStatus.staff)"
@@ -150,27 +149,13 @@ const organizedStaff = computed(() => {
               >
                 {{ staffStatus.staff.name }}
               </button>
-              <span
-                v-if="isTemporaryAssignment(staffStatus)"
-                class="temporary-badge"
-                title="Temporarily assigned from runner pool"
-              >
-                Temporary
-              </span>
+
+              <!-- Cover info (if temporary assignment) -->
+              <div v-if="isTemporaryAssignment(staffStatus)" class="cover-info">
+                <span class="cover-label">Cover</span>
+                <span class="cover-timeframe">{{ getDisplayTime(staffStatus) }}</span>
+              </div>
             </div>
-            <span
-              class="status-badge"
-              :class="{
-                'status-active': staffStatus.isActive,
-                'status-scheduled': staffStatus.isScheduled && !staffStatus.isActive,
-                'status-off-duty': staffStatus.isOffDuty,
-                'status-absent': staffStatus.isAbsent
-              }"
-            >
-              <span v-if="staffStatus.isAbsent">Absent</span>
-              <span v-else-if="staffStatus.isOffDuty">Off Duty</span>
-              <span v-else>{{ staffStatus.staff.defaultStartTime }} - {{ staffStatus.staff.defaultEndTime }}</span>
-            </span>
           </li>
         </ul>
       </div>
@@ -194,15 +179,16 @@ const organizedStaff = computed(() => {
 .clickable-staff {
   background: none;
   border: none;
-  padding: 0;
+  padding: 0.125rem 0.25rem;
+  margin: -0.125rem -0.25rem;
   font: inherit;
   color: inherit;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
   border-radius: 4px;
-  padding: 0.125rem 0.25rem;
-  margin: -0.125rem -0.25rem;
+  display: inline-block;
+  width: auto;
 }
 
 .clickable-staff:hover {
@@ -215,30 +201,59 @@ const organizedStaff = computed(() => {
   transform: translateY(0);
 }
 
-/* Temporary assignment styling */
-.staff-info {
+/* New layout: Name [Cover | Time frame] */
+.staff-layout {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1;
-}
-
-.staff-item.staff-temporary {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border-left: 4px solid #10b981;
-}
-
-.temporary-badge {
-  font-size: 0.625rem;
-  color: #065f46;
-  font-weight: 600;
-  background: rgba(16, 185, 129, 0.2);
-  padding: 0.125rem 0.375rem;
-  border-radius: 8px;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  display: inline-flex;
   align-items: center;
-  align-self: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.staff-name {
+  font-weight: 600;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+/* Base staff item styling */
+.staff-item {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: #f8f9fa;
+  margin-bottom: 0.125rem;
+  transition: all 0.2s ease;
+}
+
+.staff-item:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.cover-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+.cover-label {
+  font-size: 0.75rem;
+  color: #065f46;
+  font-weight: 500;
+}
+
+.cover-timeframe {
+  font-size: 0.75rem;
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* Temporary assignment styling */
+.staff-item.staff-temporary {
+  background: #ecfdf5;
 }
 </style>
 

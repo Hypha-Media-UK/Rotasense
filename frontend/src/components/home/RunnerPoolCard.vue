@@ -49,6 +49,15 @@ function getTemporaryAllocationLocation(staffStatus: any) {
   return 'Unknown'
 }
 
+function getAllocationTimeframe(staffStatus: any) {
+  const override = staffStatus.override
+  if (!override || override.overrideType !== 'TEMPORARY_ALLOCATION') return ''
+
+  const startTime = override.startTime || staffStatus.staff.defaultStartTime
+  const endTime = override.endTime || staffStatus.staff.defaultEndTime
+  return `${startTime} - ${endTime}`
+}
+
 // Computed properties for enhanced UI (matching department card style)
 const statusClass = computed(() => {
   if (props.runnerPoolStatus.activeStaff === 0) return 'status-closed'
@@ -121,35 +130,29 @@ const organizedStaff = computed(() => {
             class="staff-item"
             :class="{ 'staff-temporarily-allocated': isTemporarilyAllocated(staffStatus) }"
           >
-            <div class="staff-info">
-              <button
-                class="staff-name clickable-staff"
-                @click="openStaffReassignmentModal(staffStatus.staff)"
-                :title="'Click to reassign ' + staffStatus.staff.name"
-              >
-                {{ staffStatus.staff.name }}
-              </button>
-              <span
-                v-if="isTemporarilyAllocated(staffStatus)"
-                class="allocation-badge"
-                :title="'Temporarily assigned to ' + getTemporaryAllocationLocation(staffStatus)"
-              >
-                → {{ getTemporaryAllocationLocation(staffStatus) }}
-              </span>
+            <div class="staff-layout">
+              <div class="staff-main">
+                <!-- Name -->
+                <button
+                  class="staff-name clickable-staff"
+                  @click="openStaffReassignmentModal(staffStatus.staff)"
+                  :title="'Click to reassign ' + staffStatus.staff.name"
+                >
+                  {{ staffStatus.staff.name }}
+                </button>
+
+                <!-- Contracted hours -->
+                <span class="contracted-hours">
+                  {{ staffStatus.staff.defaultStartTime }} - {{ staffStatus.staff.defaultEndTime }}
+                </span>
+              </div>
+
+              <!-- Allocation info (if temporarily allocated) -->
+              <div v-if="isTemporarilyAllocated(staffStatus)" class="allocation-info">
+                <span class="allocation-location">{{ getTemporaryAllocationLocation(staffStatus) }}</span>
+                <span class="allocation-timeframe">{{ getAllocationTimeframe(staffStatus) }}</span>
+              </div>
             </div>
-            <span
-              class="status-badge"
-              :class="{
-                'status-active': staffStatus.isActive,
-                'status-scheduled': staffStatus.isScheduled && !staffStatus.isActive,
-                'status-off-duty': staffStatus.isOffDuty,
-                'status-absent': staffStatus.isAbsent
-              }"
-            >
-              <span v-if="staffStatus.isAbsent">Absent</span>
-              <span v-else-if="staffStatus.isOffDuty">Off Duty</span>
-              <span v-else>{{ staffStatus.staff.defaultStartTime }} - {{ staffStatus.staff.defaultEndTime }}</span>
-            </span>
           </li>
         </ul>
       </div>
@@ -180,15 +183,16 @@ const organizedStaff = computed(() => {
 .clickable-staff {
   background: none;
   border: none;
-  padding: 0;
+  padding: 0.125rem 0.25rem;
+  margin: -0.125rem -0.25rem;
   font: inherit;
   color: inherit;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
   border-radius: 4px;
-  padding: 0.125rem 0.25rem;
-  margin: -0.125rem -0.25rem;
+  display: inline-block;
+  width: auto;
 }
 
 .clickable-staff:hover {
@@ -201,42 +205,74 @@ const organizedStaff = computed(() => {
   transform: translateY(0);
 }
 
-/* Temporarily allocated staff styling */
-.staff-item.staff-temporarily-allocated {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-left: 4px solid #f59e0b;
-  position: relative;
+/* Base staff item styling */
+.staff-item {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: #f8f9fa;
+  margin-bottom: 0.125rem;
+  transition: all 0.2s ease;
 }
 
-.staff-item.staff-temporarily-allocated::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 0 12px 12px 0;
-  border-color: transparent #f59e0b transparent transparent;
+.staff-item:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.allocation-badge {
+/* New layout: Name | Contracted hours [Allocation | Time frame] */
+.staff-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.staff-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.staff-name {
+  font-weight: 600;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.contracted-hours {
+  color: #6b7280;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.allocation-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(245, 158, 11, 0.15);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.allocation-location {
   font-size: 0.75rem;
   color: #92400e;
-  font-weight: 600;
-  background: rgba(245, 158, 11, 0.2);
-  padding: 0.125rem 0.375rem;
-  border-radius: 12px;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
+  font-weight: 500;
 }
 
-.allocation-badge::before {
-  content: '↗';
-  font-size: 0.625rem;
-  opacity: 0.7;
+.allocation-timeframe {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  font-weight: 500;
 }
+
+/* Temporarily allocated staff styling */
+.staff-item.staff-temporarily-allocated {
+  background: #fef3c7;
+}
+
+
 </style>
 

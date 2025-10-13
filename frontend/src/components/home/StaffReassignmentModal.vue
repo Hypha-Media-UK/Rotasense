@@ -105,6 +105,10 @@ const isFormValid = computed(() => {
 watch(() => props.show, (newShow) => {
   if (newShow) {
     resetForm()
+    // If staff has existing allocation, populate form with current values
+    if (currentOverride.value) {
+      populateFormFromOverride()
+    }
   }
 })
 
@@ -128,6 +132,32 @@ function closeModal() {
   emit('close')
 }
 
+function populateFormFromOverride() {
+  const override = currentOverride.value
+  if (!override) return
+
+  // Set assignment type and location
+  if (override.departmentId) {
+    assignmentType.value = 'department'
+    selectedLocationId.value = override.departmentId
+  } else if (override.serviceId) {
+    assignmentType.value = 'service'
+    selectedLocationId.value = override.serviceId
+  }
+
+  // Set dates
+  startDate.value = format(new Date(override.date), 'yyyy-MM-dd')
+  if (override.endDate) {
+    endDate.value = format(new Date(override.endDate), 'yyyy-MM-dd')
+  } else {
+    endDate.value = ''
+  }
+
+  // Set times
+  startTime.value = override.startTime || props.staff?.defaultStartTime || '08:00'
+  endTime.value = override.endTime || props.staff?.defaultEndTime || '20:00'
+}
+
 async function removeTemporaryAllocation() {
   if (!props.staff || !currentOverride.value) {
     error.value = 'No temporary allocation to remove'
@@ -147,7 +177,7 @@ async function removeTemporaryAllocation() {
   }
 }
 
-async function createTemporaryAssignment() {
+async function saveTemporaryAssignment() {
   if (!props.staff || !isFormValid.value) {
     error.value = 'Please fill in all required fields'
     return
@@ -180,10 +210,17 @@ async function createTemporaryAssignment() {
       overrideData.serviceId = selectedLocationId.value
     }
 
-    await homeStore.createOverride(overrideData)
+    if (currentOverride.value) {
+      // Update existing assignment
+      await homeStore.updateOverride(currentOverride.value.id, overrideData)
+    } else {
+      // Create new assignment
+      await homeStore.createOverride(overrideData)
+    }
+
     closeModal()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to create temporary assignment'
+    error.value = err instanceof Error ? err.message : 'Failed to save temporary assignment'
   } finally {
     loading.value = false
   }
@@ -229,30 +266,21 @@ async function createTemporaryAssignment() {
         </div>
       </div>
 
-      <!-- Current Temporary Assignment (if exists) -->
-      <div v-if="hasTemporaryAllocation" class="form-section current-assignment">
-        <h3 class="section-title">Current Temporary Assignment</h3>
-        <div class="current-assignment-info">
-          <div class="assignment-details">
-            <p><strong>Assigned to:</strong> {{ currentLocation.replace(' (Temporary)', '') }}</p>
-            <p v-if="currentOverride"><strong>Start Date:</strong> {{ format(new Date(currentOverride.date), 'PPP') }}</p>
-            <p v-if="currentOverride && currentOverride.endDate"><strong>End Date:</strong> {{ format(new Date(currentOverride.endDate), 'PPP') }}</p>
-            <p v-if="currentOverride && currentOverride.startTime"><strong>Hours:</strong> {{ currentOverride.startTime }} - {{ currentOverride.endTime }}</p>
-          </div>
-          <button
-            @click="removeTemporaryAllocation"
-            :disabled="loading"
-            class="btn btn-warning"
-          >
-            <LoadingSpinner v-if="loading" size="sm" />
-            {{ loading ? 'Removing...' : 'Return to Pool' }}
-          </button>
-        </div>
-      </div>
+      <!-- Assignment Configuration -->
+      <div class="form-section">
+        <h3 class="section-title">
+          {{ hasTemporaryAllocation ? 'Edit Temporary Assignment' : 'Create Temporary Assignment' }}
+        </h3>
 
-      <!-- Assignment Configuration (only show if no current temporary assignment) -->
-      <div v-else class="form-section">
-        <h3 class="section-title">Create Temporary Assignment</h3>
+        <!-- Current assignment info (if exists) -->
+        <div v-if="hasTemporaryAllocation" class="current-assignment-banner">
+          <div class="banner-content">
+            <span class="banner-icon">📍</span>
+            <div class="banner-text">
+              <strong>Currently assigned to:</strong> {{ currentLocation.replace(' (Temporary)', '') }}
+            </div>
+          </div>
+        </div>
 
         <!-- Assignment Type -->
         <div class="form-group">
@@ -351,16 +379,29 @@ async function createTemporaryAssignment() {
     </div>
 
     <template #footer>
-      <button type="button" @click="closeModal" class="btn">Cancel</button>
-      <button
-        v-if="!hasTemporaryAllocation"
-        @click="createTemporaryAssignment"
-        :disabled="!isFormValid || loading"
-        class="btn btn-primary"
-      >
-        <LoadingSpinner v-if="loading" size="sm" />
-        {{ loading ? 'Assigning...' : 'Create Assignment' }}
-      </button>
+      <div class="modal-footer-left">
+        <button
+          v-if="hasTemporaryAllocation"
+          @click="removeTemporaryAllocation"
+          :disabled="loading"
+          class="btn btn-warning"
+        >
+          <LoadingSpinner v-if="loading" size="sm" />
+          {{ loading ? 'Removing...' : 'Return to Pool' }}
+        </button>
+      </div>
+
+      <div class="modal-footer-right">
+        <button type="button" @click="closeModal" class="btn">Cancel</button>
+        <button
+          @click="saveTemporaryAssignment"
+          :disabled="!isFormValid || loading"
+          class="btn btn-primary"
+        >
+          <LoadingSpinner v-if="loading" size="sm" />
+          {{ loading ? 'Saving...' : (hasTemporaryAllocation ? 'Update Assignment' : 'Create Assignment') }}
+        </button>
+      </div>
     </template>
   </Modal>
 </template>
@@ -561,5 +602,45 @@ async function createTemporaryAssignment() {
   color: #6b7280;
   font-style: italic;
   margin-top: 0.25rem;
+}
+
+/* Current assignment banner */
+.current-assignment-banner {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.banner-icon {
+  font-size: 1.25rem;
+}
+
+.banner-text {
+  color: #92400e;
+  font-size: 0.875rem;
+}
+
+/* Modal footer layout */
+:deep(.modal-dialog footer) {
+  justify-content: space-between !important;
+}
+
+.modal-footer-left {
+  display: flex;
+  align-items: center;
+}
+
+.modal-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 </style>
