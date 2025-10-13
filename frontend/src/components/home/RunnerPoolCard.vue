@@ -129,17 +129,15 @@ const organizedStaff = computed(() => {
             :key="staffStatus.staff.id"
             class="staff-item"
             :class="{ 'staff-temporarily-allocated': isTemporarilyAllocated(staffStatus) }"
+            @click="openStaffReassignmentModal(staffStatus.staff)"
+            :title="'Click to reassign ' + staffStatus.staff.name"
           >
             <div class="staff-layout">
               <div class="staff-main">
                 <!-- Name -->
-                <button
-                  class="staff-name clickable-staff"
-                  @click="openStaffReassignmentModal(staffStatus.staff)"
-                  :title="'Click to reassign ' + staffStatus.staff.name"
-                >
+                <span class="staff-name">
                   {{ staffStatus.staff.name }}
-                </button>
+                </span>
 
                 <!-- Contracted hours -->
                 <span class="contracted-hours">
@@ -172,50 +170,26 @@ const organizedStaff = computed(() => {
 </template>
 
 <style scoped>
-/* Clickable staff names */
-.staff-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1;
-}
-
-.clickable-staff {
-  background: none;
-  border: none;
-  padding: 0.125rem 0.25rem;
-  margin: -0.125rem -0.25rem;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 4px;
-  display: inline-block;
-  width: auto;
-}
-
-.clickable-staff:hover {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  transform: translateY(-1px);
-}
-
-.clickable-staff:active {
-  transform: translateY(0);
+/* Section styling */
+section {
+  gap: 0;
 }
 
 /* Base staff item styling */
 .staff-item {
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
+  padding: 0.375rem 0.5rem;
   background: #f8f9fa;
   margin-bottom: 0.125rem;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .staff-item:hover {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.staff-item:active {
+  transform: translateY(1px);
 }
 
 /* New layout: Name | Contracted hours [Allocation | Time frame] */
