@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Modal from '@/components/Modal.vue'
@@ -72,11 +72,11 @@ const newAllocation = ref<CreateAllocationForm>({
 
 const allocationType = ref<'department' | 'service'>('department')
 
-const tabs = [
+const tabs = computed(() => [
   { key: 'regular', label: 'Regular', staff: configStore.regularStaff },
   { key: 'relief', label: 'Relief', staff: configStore.reliefStaff },
   { key: 'supervisor', label: 'Supervisors', staff: configStore.supervisorStaff }
-] as const
+])
 
 const isEditing = computed(() => editingStaff.value !== null)
 const formTitle = computed(() => isEditing.value ? 'Edit Staff Member' : 'Add Staff Member')
@@ -495,6 +495,11 @@ function onScheduleTypeChange() {
 }
 
 const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+// Initialize data on component mount
+onMounted(() => {
+  configStore.fetchAllData()
+})
 </script>
 
 <template>

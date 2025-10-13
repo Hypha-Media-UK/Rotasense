@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Modal from '@/components/Modal.vue'
@@ -468,6 +468,11 @@ function applyBulkTimes() {
 
 
 const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+// Initialize data on component mount
+onMounted(() => {
+  configStore.fetchAllData()
+})
 </script>
 
 <template>
