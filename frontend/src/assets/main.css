@@ -563,18 +563,9 @@
     transition: all var(--transition-fast);
   }
 
-  .status-light:hover {
-    transform: scale(1.2);
-    box-shadow: 0 0 0 2px var(--color-border), 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
   .status-light.status-operational {
     background-color: var(--color-success);
     box-shadow: 0 0 0 2px var(--color-surface-elevated), 0 0 0 3px color-mix(in oklch, var(--color-success) 30%, transparent);
-  }
-
-  .status-light.status-operational:hover {
-    box-shadow: 0 0 0 2px var(--color-surface-elevated), 0 0 0 4px color-mix(in oklch, var(--color-success) 40%, transparent), 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
   .status-light.status-understaffed {
@@ -582,17 +573,9 @@
     box-shadow: 0 0 0 2px var(--color-surface-elevated), 0 0 0 3px color-mix(in oklch, var(--color-error) 30%, transparent);
   }
 
-  .status-light.status-understaffed:hover {
-    box-shadow: 0 0 0 2px var(--color-surface-elevated), 0 0 0 4px color-mix(in oklch, var(--color-error) 40%, transparent), 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-
   .status-light.status-closed {
     background-color: var(--color-text-muted);
     box-shadow: 0 0 0 2px var(--color-surface-elevated), 0 0 0 3px color-mix(in oklch, var(--color-text-muted) 30%, transparent);
-  }
-
-  .status-light.status-closed:hover {
-    box-shadow: 0 0 0 2px var(--color-surface-elevated), 0 0 0 4px color-mix(in oklch, var(--color-text-muted) 40%, transparent), 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
   /* Status Badge Base Styles */
@@ -1045,11 +1028,7 @@
     overflow: hidden;
   }
 
-  main article article:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-xl);
-    border-color: var(--color-primary);
-  }
+
 
   /* Enhanced Card header */
   main article article > header {

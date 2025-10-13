@@ -20,7 +20,9 @@ onMounted(() => {
     </header>
 
     <section class="content-section">
-      <RunnerPoolGrid />
+      <div class="cards-container">
+        <RunnerPoolGrid />
+      </div>
     </section>
 
     <section class="content-section">
