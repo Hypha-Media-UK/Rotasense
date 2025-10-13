@@ -41,6 +41,8 @@ const newAllocation = ref<CreateAllocationForm>({
   serviceId: undefined
 })
 
+const allocationType = ref<'department' | 'service'>('department')
+
 const tabs = [
   { key: 'regular', label: 'Regular', staff: configStore.regularStaff },
   { key: 'relief', label: 'Relief', staff: configStore.reliefStaff },
@@ -54,6 +56,11 @@ const formTitle = computed(() => isEditing.value ? 'Edit Staff Member' : 'Add St
 const currentStaffAllocations = computed(() => {
   if (!editingStaff.value) return []
   return configStore.allocations.filter(a => a.staffId === editingStaff.value?.id)
+})
+
+// Check if staff already has an allocation (for restricting to one allocation)
+const hasExistingAllocation = computed(() => {
+  return currentStaffAllocations.value.length > 0
 })
 
 // Computed properties for schedule type
@@ -145,6 +152,7 @@ function resetAllocationForm() {
     departmentId: undefined,
     serviceId: undefined
   }
+  allocationType.value = 'department'
 }
 
 function openCreateForm() {
@@ -262,8 +270,18 @@ async function createAllocation() {
     return
   }
 
-  if (!newAllocation.value.departmentId && !newAllocation.value.serviceId) {
-    error.value = 'Please select a department or service'
+  // Check if staff already has an allocation
+  if (hasExistingAllocation.value) {
+    error.value = 'Staff member already has an allocation. Remove the existing allocation first.'
+    return
+  }
+
+  const selectedId = allocationType.value === 'department'
+    ? newAllocation.value.departmentId
+    : newAllocation.value.serviceId
+
+  if (!selectedId) {
+    error.value = `Please select a ${allocationType.value}`
     return
   }
 
@@ -570,51 +588,82 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
       <!-- Staff Allocations Tab -->
       <div v-if="staffModalTab === 'allocations'" class="allocations-tab">
         <div class="allocations-section">
-          <h3>Current Allocations</h3>
+          <h3>Current Allocation</h3>
           <div v-if="currentStaffAllocations.length === 0" class="empty-state">
-            No allocations for this staff member yet.
+            <p>No allocation set for this staff member.</p>
+            <p class="form-help">Staff members must be allocated to either a department or service to appear on the homepage.</p>
           </div>
-          <div v-else class="allocations-list">
-            <div v-for="allocation in currentStaffAllocations" :key="allocation.id" class="allocation-card">
+          <div v-else class="current-allocation">
+            <div class="allocation-card">
               <div class="allocation-info">
-                <h4 v-if="allocation.department">{{ allocation.department.name }}</h4>
-                <h4 v-else-if="allocation.service">{{ allocation.service.name }}</h4>
-                <p class="allocation-type">Assignment only - schedule configured in staff details</p>
+                <h4 v-if="currentStaffAllocations[0].departments">{{ currentStaffAllocations[0].departments.name }}</h4>
+                <h4 v-else-if="currentStaffAllocations[0].services">{{ currentStaffAllocations[0].services.name }}</h4>
+                <p class="allocation-type">
+                  {{ currentStaffAllocations[0].departments ? 'Department' : 'Service' }} allocation - schedule configured in staff details
+                </p>
               </div>
-              <button @click="deleteAllocation(allocation.id)" class="btn btn-danger btn-sm">
-                Remove
+              <button @click="deleteAllocation(currentStaffAllocations[0].id)" class="btn btn-danger btn-sm">
+                Change Allocation
               </button>
             </div>
           </div>
         </div>
 
-        <div class="add-allocation-section">
-          <h3>Add New Allocation</h3>
-          <p class="form-help">Allocate this staff member to a department, service, or shift type.</p>
+        <div v-if="!hasExistingAllocation" class="add-allocation-section">
+          <h3>Set Allocation</h3>
+          <p class="form-help">Allocate this staff member to either a department or service. Staff can only be allocated to one location at a time.</p>
           <form @submit.prevent="createAllocation" class="form">
             <div class="form-group">
-              <label class="form-label">Allocate To</label>
-              <div class="allocation-type-selector">
-                <div class="form-group">
-                  <label class="form-label">Department</label>
-                  <select v-model="newAllocation.departmentId" class="form-select">
-                    <option :value="undefined">Select department...</option>
-                    <option v-for="dept in configStore.departments" :key="dept.id" :value="dept.id">
-                      {{ dept.name }}
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Service</label>
-                  <select v-model="newAllocation.serviceId" class="form-select">
-                    <option :value="undefined">Select service...</option>
-                    <option v-for="service in configStore.services" :key="service.id" :value="service.id">
-                      {{ service.name }}
-                    </option>
-                  </select>
-                </div>
+              <label class="form-label">Allocation Type</label>
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    v-model="allocationType"
+                    value="department"
+                    @change="newAllocation.serviceId = undefined"
+                  />
+                  <span>Department</span>
+                </label>
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    v-model="allocationType"
+                    value="service"
+                    @change="newAllocation.departmentId = undefined"
+                  />
+                  <span>Service</span>
+                </label>
               </div>
-              <p class="form-help">Select either a department or service to assign this staff member to.</p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                {{ allocationType === 'department' ? 'Department' : 'Service' }}
+              </label>
+              <select
+                v-if="allocationType === 'department'"
+                v-model="newAllocation.departmentId"
+                class="form-select"
+                required
+              >
+                <option :value="undefined">Select department...</option>
+                <option v-for="dept in configStore.departments" :key="dept.id" :value="dept.id">
+                  {{ dept.name }}
+                </option>
+              </select>
+              <select
+                v-else
+                v-model="newAllocation.serviceId"
+                class="form-select"
+                required
+              >
+                <option :value="undefined">Select service...</option>
+                <option v-for="service in configStore.services" :key="service.id" :value="service.id">
+                  {{ service.name }}
+                </option>
+              </select>
+              <p class="form-help">Staff can only be allocated to one location at a time.</p>
             </div>
 
 
@@ -696,8 +745,8 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
               <h3>{{ staff.name }}</h3>
               <div v-if="staff.allocations && staff.allocations.length > 0" class="staff-allocations">
                 <template v-for="(allocation, index) in staff.allocations" :key="allocation.id">
-                  <span v-if="allocation.department">{{ allocation.department.name }}</span>
-                  <span v-else-if="allocation.service">{{ allocation.service.name }}</span>
+                  <span v-if="allocation.departments">{{ allocation.departments.name }}</span>
+                  <span v-else-if="allocation.services">{{ allocation.services.name }}</span>
                   <span v-if="index < staff.allocations.length - 1">, </span>
                 </template>
               </div>
@@ -1193,6 +1242,45 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 .allocation-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Radio button styling */
+.radio-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.radio-option input[type="radio"] {
+  margin: 0;
+}
+
+.radio-option:hover {
+  color: var(--color-primary);
+}
+
+/* Current allocation styling */
+.current-allocation .allocation-card {
+  background: #f0f9ff;
+  border-color: #0ea5e9;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
 }
 </style>
 

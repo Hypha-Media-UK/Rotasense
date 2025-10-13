@@ -90,10 +90,10 @@ export const useHomeStore = defineStore('home', () => {
           currentLocation = override.service.name
         }
       } else if (allocation) {
-        if (allocation.department) {
-          currentLocation = allocation.department.name
-        } else if (allocation.service) {
-          currentLocation = allocation.service.name
+        if (allocation.departments) {
+          currentLocation = allocation.departments.name
+        } else if (allocation.services) {
+          currentLocation = allocation.services.name
         }
       }
 
@@ -106,6 +106,8 @@ export const useHomeStore = defineStore('home', () => {
       if (isCurrentDay && !isAbsent && currentLocation !== 'Unallocated') {
         timeStatus = calculateTimeStatus(staff, new Date())
       }
+
+
 
       // Determine final status
       const isActive = timeStatus === 'active' && isScheduledToday && !isAbsent && currentLocation !== 'Unallocated'
