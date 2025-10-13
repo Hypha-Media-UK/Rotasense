@@ -52,6 +52,35 @@ const statusText = computed(() => {
   return 'Closed'
 })
 
+// Helper function to get display hours based on shift type
+function getDisplayHours(staffStatus: any): string {
+  const staff = staffStatus.staff
+
+  // For rotating supervisors, show hours based on current shift type
+  if (staffStatus.isRotatingSchedule && staffStatus.currentShiftType === 'night') {
+    return '20:00 - 08:00'
+  }
+
+  // For fixed night staff, show night hours
+  if (staff.isNightStaff) {
+    return '20:00 - 08:00'
+  }
+
+  // Default to day hours
+  return `${staff.defaultStartTime} - ${staff.defaultEndTime}`
+}
+
+// Helper function to sort staff with supervisors first
+function sortStaffWithSupervisorsFirst(staff: any[]): any[] {
+  return staff.sort((a, b) => {
+    // Sort supervisors to the top
+    if (a.staff.category === 'SUPERVISOR' && b.staff.category !== 'SUPERVISOR') return -1
+    if (a.staff.category !== 'SUPERVISOR' && b.staff.category === 'SUPERVISOR') return 1
+    // Then sort by name
+    return a.staff.name.localeCompare(b.staff.name)
+  })
+}
+
 // Organize staff by shift start time and day/night
 const organizedStaff = computed(() => {
   const staffByTime = new Map()
@@ -63,7 +92,10 @@ const organizedStaff = computed(() => {
       staffByTime.set(startTime, { dayStaff: [], nightStaff: [] })
     }
 
-    if (staffStatus.staff.isNightStaff) {
+    // Use currentShiftType for rotating supervisors, fallback to isNightStaff
+    const isCurrentlyNightShift = staffStatus.currentShiftType === 'night'
+
+    if (isCurrentlyNightShift) {
       staffByTime.get(startTime).nightStaff.push(staffStatus)
     } else {
       staffByTime.get(startTime).dayStaff.push(staffStatus)
@@ -75,8 +107,8 @@ const organizedStaff = computed(() => {
     .sort(([timeA], [timeB]) => timeA.localeCompare(timeB))
     .map(([startTime, staff]) => ({
       startTime,
-      dayStaff: staff.dayStaff,
-      nightStaff: staff.nightStaff
+      dayStaff: sortStaffWithSupervisorsFirst(staff.dayStaff),
+      nightStaff: sortStaffWithSupervisorsFirst(staff.nightStaff)
     }))
 })
 
@@ -110,15 +142,25 @@ const organizedStaff = computed(() => {
             v-for="staffStatus in timeGroup.dayStaff"
             :key="staffStatus.staff.id"
             class="staff-item"
-            :class="{ 'staff-temporary': isTemporaryAssignment(staffStatus) }"
+            :class="{
+              'staff-temporary': isTemporaryAssignment(staffStatus),
+              'staff-supervisor': staffStatus.staff.category === 'SUPERVISOR'
+            }"
             @click="openStaffReassignmentModal(staffStatus.staff)"
             :title="'Click to reassign ' + staffStatus.staff.name"
           >
             <div class="staff-layout">
-              <!-- Name -->
-              <span class="staff-name">
-                {{ staffStatus.staff.name }}
-              </span>
+              <div class="staff-main">
+                <!-- Name -->
+                <span class="staff-name">
+                  {{ staffStatus.staff.name }}
+                </span>
+
+                <!-- Contracted hours -->
+                <span class="contracted-hours">
+                  {{ getDisplayHours(staffStatus) }}
+                </span>
+              </div>
 
               <!-- Cover info (if temporary assignment) -->
               <div v-if="isTemporaryAssignment(staffStatus)" class="cover-info">
@@ -136,15 +178,25 @@ const organizedStaff = computed(() => {
             v-for="staffStatus in timeGroup.nightStaff"
             :key="staffStatus.staff.id"
             class="staff-item night-staff"
-            :class="{ 'staff-temporary': isTemporaryAssignment(staffStatus) }"
+            :class="{
+              'staff-temporary': isTemporaryAssignment(staffStatus),
+              'staff-supervisor': staffStatus.staff.category === 'SUPERVISOR'
+            }"
             @click="openStaffReassignmentModal(staffStatus.staff)"
             :title="'Click to reassign ' + staffStatus.staff.name"
           >
             <div class="staff-layout">
-              <!-- Name -->
-              <span class="staff-name">
-                {{ staffStatus.staff.name }}
-              </span>
+              <div class="staff-main">
+                <!-- Name -->
+                <span class="staff-name">
+                  {{ staffStatus.staff.name }}
+                </span>
+
+                <!-- Contracted hours -->
+                <span class="contracted-hours">
+                  {{ getDisplayHours(staffStatus) }}
+                </span>
+              </div>
 
               <!-- Cover info (if temporary assignment) -->
               <div v-if="isTemporaryAssignment(staffStatus)" class="cover-info">
@@ -171,19 +223,32 @@ const organizedStaff = computed(() => {
 </template>
 
 <style scoped>
-/* New layout: Name [Cover | Time frame] */
+/* New layout: Name | Contracted hours [Cover | Time frame] */
 .staff-layout {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
   width: 100%;
+}
+
+.staff-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
 }
 
 .staff-name {
   font-weight: 600;
   flex-shrink: 0;
   text-align: left;
+}
+
+.contracted-hours {
+  color: #6b7280;
+  font-size: 0.875rem;
+  flex-shrink: 0;
 }
 
 /* Section styling */
@@ -198,6 +263,11 @@ section {
   margin-bottom: 0.125rem;
   transition: all 0.2s ease;
   cursor: pointer;
+}
+
+/* Supervisor styling - darker grey */
+.staff-item.staff-supervisor {
+  background: #e5e7eb;
 }
 
 .staff-item:hover {

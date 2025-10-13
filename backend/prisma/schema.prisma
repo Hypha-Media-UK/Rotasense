@@ -103,6 +103,7 @@ model staff {
   shiftOffset       Int?
   zeroStartDateId   String?
   runnerPoolId      Int?
+  shiftPattern      staff_shiftPattern @default(FIXED)
   daily_overrides   daily_overrides[]
   staff_allocations staff_allocations[]
   runner_allocations runner_allocations[]
@@ -178,4 +179,9 @@ enum daily_overrides_overrideType {
 enum staff_scheduleType {
   DAILY
   SHIFT_CYCLE
+}
+
+enum staff_shiftPattern {
+  FIXED
+  ROTATING_DAY_NIGHT
 }

@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { prisma } from '../index';
-import { daysOfWeekSchema, timeSchema, staffCategorySchema, scheduleTypeSchema, nonEmptyStringSchema, optionalPositiveIntSchema, optionalNonNegativeIntSchema, zeroStartDateIdSchema, validateShiftTimes } from '../validation/schemas';
+import { daysOfWeekSchema, timeSchema, staffCategorySchema, scheduleTypeSchema, shiftPatternSchema, nonEmptyStringSchema, optionalPositiveIntSchema, optionalNonNegativeIntSchema, zeroStartDateIdSchema, validateShiftTimes } from '../validation/schemas';
 
 const router = express.Router();
 
@@ -15,6 +15,7 @@ const createStaffSchema = z.object({
   daysOff: optionalPositiveIntSchema,
   shiftOffset: optionalNonNegativeIntSchema,
   zeroStartDateId: zeroStartDateIdSchema.optional(),
+  shiftPattern: shiftPatternSchema.optional(),
   defaultStartTime: timeSchema.optional(),
   defaultEndTime: timeSchema.optional(),
   contractedDays: daysOfWeekSchema,
@@ -42,6 +43,24 @@ const createStaffSchema = z.object({
   {
     message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
   }
+).refine(
+  (data) => {
+    // Validate rotating day/night pattern requirements
+    if (data.shiftPattern === 'ROTATING_DAY_NIGHT') {
+      // Only supervisors can have rotating shifts
+      if (data.category !== 'SUPERVISOR') {
+        return false;
+      }
+      // Rotating shifts require SHIFT_CYCLE schedule type
+      if (data.scheduleType !== 'SHIFT_CYCLE') {
+        return false;
+      }
+    }
+    return true;
+  },
+  {
+    message: "Rotating day/night shifts are only available for supervisors with SHIFT_CYCLE schedule type"
+  }
 );
 
 const updateStaffSchema = z.object({
@@ -52,6 +71,7 @@ const updateStaffSchema = z.object({
   daysOff: optionalPositiveIntSchema,
   shiftOffset: optionalNonNegativeIntSchema,
   zeroStartDateId: zeroStartDateIdSchema.optional(),
+  shiftPattern: shiftPatternSchema.optional(),
   defaultStartTime: timeSchema.optional(),
   defaultEndTime: timeSchema.optional(),
   contractedDays: daysOfWeekSchema.optional(),
@@ -79,6 +99,24 @@ const updateStaffSchema = z.object({
   },
   {
     message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
+  }
+).refine(
+  (data) => {
+    // Validate rotating day/night pattern requirements
+    if (data.shiftPattern === 'ROTATING_DAY_NIGHT') {
+      // Only supervisors can have rotating shifts
+      if (data.category !== 'SUPERVISOR') {
+        return false;
+      }
+      // Rotating shifts require SHIFT_CYCLE schedule type
+      if (data.scheduleType !== 'SHIFT_CYCLE') {
+        return false;
+      }
+    }
+    return true;
+  },
+  {
+    message: "Rotating day/night shifts are only available for supervisors with SHIFT_CYCLE schedule type"
   }
 );
 

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Modal from '@/components/Modal.vue'
-import type { CreateStaffForm, Staff, StaffCategory, ScheduleType, DayOfWeek, CreateAllocationForm, StaffAllocation, ZeroStartDate } from '@/types'
+import type { CreateStaffForm, Staff, StaffCategory, ScheduleType, ShiftPattern, DayOfWeek, CreateAllocationForm, StaffAllocation, ZeroStartDate } from '@/types'
 
 const configStore = useConfigStore()
 const activeTab = ref<'regular' | 'relief' | 'supervisor'>('regular')
@@ -165,7 +165,12 @@ function hasStaffDaySpecificTime(day: DayOfWeek): boolean {
 
 function getStaffScheduleDisplay(staff: Staff): string {
   if (staff.scheduleType === 'SHIFT_CYCLE') {
-    return `${staff.daysOn}/${staff.daysOff} Shift Cycle (Group ${String.fromCharCode(65 + (staff.shiftOffset || 0) / (staff.daysOn || 4))})`
+    if (staff.shiftPattern === 'ROTATING_DAY_NIGHT') {
+      return `${staff.daysOn}/${staff.daysOff} Rotating Day/Night Shifts`
+    } else {
+      const shiftType = staff.isNightStaff ? 'Night' : 'Day'
+      return `${staff.daysOn}/${staff.daysOff} ${shiftType} Shift Cycle (Group ${String.fromCharCode(65 + (staff.shiftOffset || 0) / (staff.daysOn || 4))})`
+    }
   } else {
     return `${staff.defaultStartTime} - ${staff.defaultEndTime}`
   }
@@ -182,6 +187,7 @@ function resetFormData() {
     daysOff: 4,
     shiftOffset: 0,
     zeroStartDateId: defaultZeroStartDateId.value,
+    shiftPattern: 'FIXED',
     defaultStartTime: '08:00',
     defaultEndTime: '20:00',
     contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
@@ -232,6 +238,7 @@ function openEditForm(staff: Staff) {
     daysOff: staff.daysOff,
     shiftOffset: staff.shiftOffset,
     zeroStartDateId: staff.zeroStartDateId,
+    shiftPattern: staff.shiftPattern,
     defaultStartTime: staff.defaultStartTime,
     defaultEndTime: staff.defaultEndTime,
     contractedDays: [...staff.contractedDays],
@@ -496,6 +503,19 @@ function onScheduleTypeChange() {
 
 const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
+// Watch for category changes to set appropriate defaults
+watch(() => newStaff.value.category, (newCategory) => {
+  if (newCategory === 'SUPERVISOR') {
+    // Default supervisors to shift cycle with rotating pattern
+    newStaff.value.scheduleType = 'SHIFT_CYCLE'
+    newStaff.value.shiftPattern = 'ROTATING_DAY_NIGHT'
+    newStaff.value.isNightStaff = false // Not relevant for rotating
+  } else {
+    // Reset to defaults for regular/relief staff
+    newStaff.value.shiftPattern = 'FIXED'
+  }
+})
+
 // Initialize data on component mount
 onMounted(() => {
   configStore.fetchAllData()
@@ -608,6 +628,53 @@ onMounted(() => {
                     <span class="radio-description">Rotating pattern (e.g., 4 on / 4 off)</span>
                   </div>
                 </label>
+              </div>
+            </div>
+
+            <!-- Supervisor Shift Pattern Configuration -->
+            <div v-if="newStaff.category === 'SUPERVISOR'" class="form-section">
+              <h4 class="subsection-title">Supervisor Shift Pattern</h4>
+              <div class="form-group">
+                <label class="form-label">Shift Pattern</label>
+                <select v-model="newStaff.shiftPattern" class="form-select" required>
+                  <option value="FIXED">Fixed Day/Night Shift</option>
+                  <option value="ROTATING_DAY_NIGHT">Rotating Day/Night Shifts</option>
+                </select>
+                <p class="form-help">
+                  <strong>Fixed:</strong> Works either day shifts OR night shifts only<br>
+                  <strong>Rotating:</strong> Alternates between day and night shifts (4 day → 4 off → 4 night → 4 off)
+                </p>
+              </div>
+
+              <!-- Show isNightStaff only for FIXED pattern -->
+              <div v-if="newStaff.shiftPattern === 'FIXED'" class="form-group">
+                <label class="checkbox-label">
+                  <input
+                    v-model="newStaff.isNightStaff"
+                    type="checkbox"
+                    class="form-checkbox"
+                  >
+                  Night Staff
+                </label>
+                <p class="form-help">Check if this supervisor works night shifts only</p>
+              </div>
+
+              <!-- Show rotation info for ROTATING pattern -->
+              <div v-if="newStaff.shiftPattern === 'ROTATING_DAY_NIGHT'" class="rotation-info">
+                <div class="info-card">
+                  <h5>Rotation Pattern</h5>
+                  <div class="pattern-display">
+                    <div class="pattern-step day-shift">4 Days (Day Shift)</div>
+                    <div class="pattern-arrow">→</div>
+                    <div class="pattern-step off-duty">4 Days Off</div>
+                    <div class="pattern-arrow">→</div>
+                    <div class="pattern-step night-shift">4 Nights (Night Shift)</div>
+                    <div class="pattern-arrow">→</div>
+                    <div class="pattern-step off-duty">4 Days Off</div>
+                    <div class="pattern-arrow">→</div>
+                    <div class="pattern-repeat">Repeat...</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1757,6 +1824,65 @@ onMounted(() => {
 
 .empty-state p {
   margin: 0.5rem 0;
+}
+
+/* Supervisor shift pattern styles */
+.rotation-info {
+  margin-top: 1rem;
+}
+
+.info-card {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.pattern-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pattern-step {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 80px;
+}
+
+.pattern-step.day-shift {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+}
+
+.pattern-step.night-shift {
+  background: #e0e7ff;
+  border: 1px solid #6366f1;
+  color: #3730a3;
+}
+
+.pattern-step.off-duty {
+  background: #f3f4f6;
+  border: 1px solid #9ca3af;
+  color: #374151;
+}
+
+.pattern-arrow {
+  font-size: 1.25rem;
+  color: #6b7280;
+  font-weight: bold;
+}
+
+.pattern-repeat {
+  font-style: italic;
+  color: #6b7280;
+  font-size: 0.875rem;
 }
 </style>
 

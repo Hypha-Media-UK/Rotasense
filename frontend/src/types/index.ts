@@ -1,6 +1,7 @@
 // Enums
 export type StaffCategory = 'REGULAR' | 'RELIEF' | 'SUPERVISOR';
 export type ScheduleType = 'DAILY' | 'SHIFT_CYCLE';
+export type ShiftPattern = 'FIXED' | 'ROTATING_DAY_NIGHT';
 export type OverrideType = 'TEMPORARY_ALLOCATION' | 'ABSENCE';
 export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
@@ -57,6 +58,7 @@ export interface Staff {
   daysOff?: number;
   shiftOffset?: number;
   zeroStartDateId?: string;
+  shiftPattern: ShiftPattern;
 
   // Time configuration
   defaultStartTime: string;
@@ -193,6 +195,7 @@ export interface CreateStaffForm {
   daysOff?: number;
   shiftOffset?: number;
   zeroStartDateId?: string;
+  shiftPattern?: ShiftPattern;
   defaultStartTime?: string;
   defaultEndTime?: string;
   contractedDays: DayOfWeek[];
@@ -247,6 +250,8 @@ export interface StaffStatus {
   isScheduled: boolean;
   isOffDuty: boolean;
   currentLocation: string;
+  currentShiftType: 'day' | 'night';
+  isRotatingSchedule: boolean;
 }
 
 export interface DepartmentStatus {

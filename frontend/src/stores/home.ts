@@ -12,6 +12,7 @@ import type {
   DayOfWeek,
   CreateOverrideForm
 } from '@/types'
+import { calculateEnhancedShiftStatus, getStaffShiftType, isRotatingSupervisor } from '@/utils/shiftCalculations'
 
 export const useHomeStore = defineStore('home', () => {
   // State
@@ -39,15 +40,27 @@ export const useHomeStore = defineStore('home', () => {
     )
   )
 
+  // Helper function to get the default zero start date
+  function getDefaultZeroStartDate(): Date {
+    const configStore = useConfigStore()
+    const zeroStartDates = configStore.settings?.zeroStartDates || []
+    if (zeroStartDates.length > 0) {
+      return new Date(zeroStartDates[0].date)
+    }
+    // Fallback to a default date if no zero start dates are configured
+    return new Date('2024-01-01')
+  }
+
   // Calculate staff status for the selected date
   const staffStatuses = computed((): StaffStatus[] => {
     const configStore = useConfigStore()
+    const zeroDate = getDefaultZeroStartDate()
 
     return configStore.staff
       .filter(staff => {
         // Check if staff is scheduled to work on the selected date
         if (staff.scheduleType === 'SHIFT_CYCLE') {
-          return calculateShiftStatus(staff, selectedDate.value)
+          return calculateEnhancedShiftStatus(staff, selectedDate.value, zeroDate)
         } else if (staff.scheduleType === 'DAILY') {
           return staff.contractedDays.includes(selectedDayOfWeek.value)
         }
@@ -115,6 +128,10 @@ export const useHomeStore = defineStore('home', () => {
 
 
 
+      // Calculate shift type for rotating supervisors
+      const currentShiftType = getStaffShiftType(staff, selectedDate.value, zeroDate)
+      const isRotatingSchedule = isRotatingSupervisor(staff)
+
       // Determine final status
       const isActive = timeStatus === 'active' && isScheduledToday && !isAbsent && currentLocation !== 'Unallocated'
       const isScheduled = (timeStatus === 'scheduled' || !isCurrentDay) && isScheduledToday && !isAbsent && currentLocation !== 'Unallocated'
@@ -128,7 +145,9 @@ export const useHomeStore = defineStore('home', () => {
         isAbsent,
         isScheduled,
         isOffDuty,
-        currentLocation
+        currentLocation,
+        currentShiftType,
+        isRotatingSchedule
       }
     })
   })
@@ -225,9 +244,9 @@ export const useHomeStore = defineStore('home', () => {
         status.staff.runnerPoolId === runnerPool.id
       )
 
-      // Separate day and night staff
-      const dayStaff = assignedStaff.filter(status => !status.staff.isNightStaff)
-      const nightStaff = assignedStaff.filter(status => status.staff.isNightStaff)
+      // Separate day and night staff based on current shift type
+      const dayStaff = assignedStaff.filter(status => status.currentShiftType === 'day')
+      const nightStaff = assignedStaff.filter(status => status.currentShiftType === 'night')
 
       // Create day shift card if there are day staff
       if (dayStaff.length > 0) {
@@ -338,7 +357,8 @@ export const useHomeStore = defineStore('home', () => {
       return staff.contractedDays.includes(currentDayOfWeek) && currentTime < startTime
     } else if (staff.scheduleType === 'SHIFT_CYCLE') {
       // Check if they're on shift today and start time hasn't passed
-      return calculateShiftStatus(staff, currentDateTime) && currentTime < startTime
+      const zeroDate = getDefaultZeroStartDate()
+      return calculateEnhancedShiftStatus(staff, currentDateTime, zeroDate) && currentTime < startTime
     }
 
     return false

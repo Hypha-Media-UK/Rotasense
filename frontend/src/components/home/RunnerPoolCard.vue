@@ -74,14 +74,47 @@ const statusText = computed(() => {
   return 'Available'
 })
 
-// Organize staff by shift start time (simplified like department cards)
+// Helper function to get display hours based on shift type
+function getDisplayHours(staffStatus: any): string {
+  const staff = staffStatus.staff
+
+  // For rotating supervisors, show hours based on current shift type
+  if (staffStatus.isRotatingSchedule && staffStatus.currentShiftType === 'night') {
+    return '20:00 - 08:00'
+  }
+
+  // For fixed night staff, show night hours
+  if (staff.isNightStaff) {
+    return '20:00 - 08:00'
+  }
+
+  // Default to day hours
+  return `${staff.defaultStartTime} - ${staff.defaultEndTime}`
+}
+
+// Organize staff by shift start time with supervisors always at top
 const organizedStaff = computed(() => {
   // Show ALL staff in the runner pool, including temporarily allocated ones
   const allStaff = props.runnerPoolStatus.assignedStaff
 
+  // Separate supervisors from regular staff
+  const supervisors = allStaff.filter(staffStatus => staffStatus.staff.category === 'SUPERVISOR')
+  const regularStaff = allStaff.filter(staffStatus => staffStatus.staff.category !== 'SUPERVISOR')
+
+  const result = []
+
+  // Add supervisors group first (if any supervisors exist)
+  if (supervisors.length > 0) {
+    result.push({
+      startTime: 'Supervisors',
+      staff: supervisors.sort((a: any, b: any) => a.staff.name.localeCompare(b.staff.name))
+    })
+  }
+
+  // Group regular staff by start time
   const staffByTime = new Map()
 
-  allStaff.forEach(staffStatus => {
+  regularStaff.forEach(staffStatus => {
     const startTime = staffStatus.staff.defaultStartTime
 
     if (!staffByTime.has(startTime)) {
@@ -91,13 +124,15 @@ const organizedStaff = computed(() => {
     staffByTime.get(startTime).push(staffStatus)
   })
 
-  // Sort by start time and return as array
-  return Array.from(staffByTime.entries())
+  // Add regular staff groups sorted by start time
+  const regularGroups = Array.from(staffByTime.entries())
     .sort(([timeA], [timeB]) => timeA.localeCompare(timeB))
     .map(([startTime, staff]) => ({
       startTime,
-      staff
+      staff: staff.sort((a: any, b: any) => a.staff.name.localeCompare(b.staff.name))
     }))
+
+  return [...result, ...regularGroups]
 })
 </script>
 
@@ -128,7 +163,10 @@ const organizedStaff = computed(() => {
             v-for="staffStatus in timeGroup.staff"
             :key="staffStatus.staff.id"
             class="staff-item"
-            :class="{ 'staff-temporarily-allocated': isTemporarilyAllocated(staffStatus) }"
+            :class="{
+              'staff-temporarily-allocated': isTemporarilyAllocated(staffStatus),
+              'staff-supervisor': staffStatus.staff.category === 'SUPERVISOR'
+            }"
             @click="openStaffReassignmentModal(staffStatus.staff)"
             :title="'Click to reassign ' + staffStatus.staff.name"
           >
@@ -141,7 +179,7 @@ const organizedStaff = computed(() => {
 
                 <!-- Contracted hours -->
                 <span class="contracted-hours">
-                  {{ staffStatus.staff.defaultStartTime }} - {{ staffStatus.staff.defaultEndTime }}
+                  {{ getDisplayHours(staffStatus) }}
                 </span>
               </div>
 
@@ -182,6 +220,11 @@ section {
   margin-bottom: 0.125rem;
   transition: all 0.2s ease;
   cursor: pointer;
+}
+
+/* Supervisor styling - darker grey */
+.staff-item.staff-supervisor {
+  background: #e5e7eb;
 }
 
 .staff-item:hover {
