@@ -95,6 +95,12 @@ export const useHomeStore = defineStore('home', () => {
         } else if (allocation.services) {
           currentLocation = allocation.services.name
         }
+      } else if (staff.runnerPoolId) {
+        // Staff assigned to runner pool should be considered allocated
+        const runnerPool = configStore.runnerPools.find(rp => rp.id === staff.runnerPoolId)
+        if (runnerPool) {
+          currentLocation = runnerPool.name
+        }
       }
 
 
