@@ -12,7 +12,7 @@ const createServiceSchema = z.object({
   operationalDays: daysOfWeekSchema,
   startTime: timeSchema,
   endTime: timeSchema,
-  minStaff: z.number().int().min(1, 'Minimum staff must be at least 1'),
+  minStaff: z.number().int().min(0, 'Minimum staff cannot be negative'),
   displayOnHome: z.boolean().optional()
 }).refine(
   (data) => {
@@ -31,7 +31,7 @@ const updateServiceSchema = z.object({
   operationalDays: daysOfWeekSchema.optional(),
   startTime: timeSchema.optional(),
   endTime: timeSchema.optional(),
-  minStaff: z.number().int().min(1, 'Minimum staff must be at least 1').optional(),
+  minStaff: z.number().int().min(0, 'Minimum staff cannot be negative').optional(),
   displayOnHome: z.boolean().optional()
 }).refine(
   (data) => {

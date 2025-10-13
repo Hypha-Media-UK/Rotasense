@@ -439,101 +439,123 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
         {{ error }}
       </div>
 
-      <form @submit.prevent="saveDepartment" class="form">
-        <div class="form-group">
-          <label class="form-label">Department Name</label>
-          <input
-            v-model="newDepartment.name"
-            type="text"
-            class="form-input"
-            placeholder="Enter department name"
-            required
-          >
-        </div>
+      <div class="department-form-content">
+        <form @submit.prevent="saveDepartment" class="department-form">
 
-        <div class="form-group">
-          <label class="form-label">Building</label>
-          <select v-model="newDepartment.buildingId" class="form-select" required>
-            <option value="0">Select building...</option>
-            <option v-for="building in configStore.buildings" :key="building.id" :value="building.id">
-              {{ building.name }}
-            </option>
-          </select>
-        </div>
+          <!-- Basic Information Section -->
+          <div class="form-section">
+            <h3 class="section-title">Basic Information</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Department Name</label>
+                <input
+                  v-model="newDepartment.name"
+                  type="text"
+                  class="form-input"
+                  placeholder="Enter department name"
+                  required
+                >
+              </div>
 
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input
-              v-model="newDepartment.is24x7"
-              type="checkbox"
-              class="checkbox"
-            >
-            24/7 Operation
-          </label>
-          <p class="form-help">Check this if the department operates 24 hours a day, 7 days a week.</p>
-        </div>
-
-        <div v-if="!newDepartment.is24x7" class="form-group">
-          <label class="form-label">Operational Days</label>
-          <p class="form-help">Click to activate/select days. Click again to deactivate.</p>
-          <div class="days-grid">
-            <button
-              v-for="day in daysOfWeek"
-              :key="day"
-              type="button"
-              @click="handleDeptDayClick(day)"
-              class="day-button"
-              :class="{
-                active: newDepartment.operationalDays.includes(day),
-                selected: selectedDeptDay === day && newDepartment.operationalDays.includes(day)
-              }"
-            >
-              {{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Time Inputs for Selected Day -->
-        <div v-if="!newDepartment.is24x7 && selectedDeptDay && newDepartment.operationalDays.includes(selectedDeptDay)" class="form-group">
-          <label class="form-label">{{ formatDayName(selectedDeptDay) }} Operating Hours</label>
-          <div class="time-inputs">
-            <div class="time-input">
-              <label class="form-label">Start Time</label>
-              <input
-                v-model="currentDeptDayTimes.startTime"
-                @input="updateDeptDayTimes"
-                type="time"
-                class="form-input"
-                required
-              >
-            </div>
-            <div class="time-input">
-              <label class="form-label">End Time</label>
-              <input
-                v-model="currentDeptDayTimes.endTime"
-                @input="updateDeptDayTimes"
-                type="time"
-                class="form-input"
-                required
-              >
+              <div class="form-group">
+                <label class="form-label">Building</label>
+                <select v-model="newDepartment.buildingId" class="form-select" required>
+                  <option value="0">Select building...</option>
+                  <option v-for="building in configStore.buildings" :key="building.id" :value="building.id">
+                    {{ building.name }}
+                  </option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
+          <!-- Operating Hours Section -->
+          <div class="form-section">
+            <h3 class="section-title">Operating Hours</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  v-model="newDepartment.is24x7"
+                  type="checkbox"
+                  class="checkbox"
+                >
+                24/7 Operation
+              </label>
+              <p class="form-help">Check this if the department operates 24 hours a day, 7 days a week.</p>
+            </div>
 
+            <div v-if="!newDepartment.is24x7" class="daily-schedule-section">
+              <h4 class="subsection-title">Operational Days</h4>
+              <p class="form-help">Select the days this department operates</p>
+              <div class="days-grid">
+                <button
+                  v-for="day in daysOfWeek"
+                  :key="day"
+                  type="button"
+                  @click="handleDeptDayClick(day)"
+                  class="day-button"
+                  :class="{
+                    active: newDepartment.operationalDays.includes(day),
+                    selected: selectedDeptDay === day && newDepartment.operationalDays.includes(day)
+                  }"
+                >
+                  <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
+                  <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label class="form-label">Minimum Staff</label>
-          <input v-model.number="newDepartment.minStaff" type="number" min="1" class="form-input" required>
-        </div>
+          <!-- Time Customization Section -->
+          <div v-if="!newDepartment.is24x7 && selectedDeptDay && newDepartment.operationalDays.includes(selectedDeptDay)" class="form-section">
+            <h3 class="section-title">{{ formatDayName(selectedDeptDay) }} Operating Hours</h3>
+            <p class="form-help">Set operating hours for {{ formatDayName(selectedDeptDay) }}</p>
 
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input v-model="newDepartment.displayOnHome" type="checkbox" class="checkbox">
-            Display on homepage (show even without staff)
-          </label>
-        </div>
-      </form>
+            <div class="time-customization">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Start Time</label>
+                  <input
+                    v-model="currentDeptDayTimes.startTime"
+                    @input="updateDeptDayTimes"
+                    type="time"
+                    class="form-input"
+                    required
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Time</label>
+                  <input
+                    v-model="currentDeptDayTimes.endTime"
+                    @input="updateDeptDayTimes"
+                    type="time"
+                    class="form-input"
+                    required
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Configuration Section -->
+          <div class="form-section">
+            <h3 class="section-title">Configuration</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Minimum Staff</label>
+                <input v-model.number="newDepartment.minStaff" type="number" min="0" class="form-input" required>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input v-model="newDepartment.displayOnHome" type="checkbox" class="checkbox">
+                  Display on homepage (show even without staff)
+                </label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
 
       <template #footer>
         <button type="button" @click="resetDepartmentForm" class="btn">Cancel</button>
@@ -766,6 +788,199 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 .status-inactive {
   color: #dc2626 !important;
   font-weight: 500;
+}
+
+/* Department Modal Styling */
+.department-form-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.department-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section {
+  background: #fafbfc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  position: relative;
+}
+
+.section-title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 1.5rem;
+  background: #3b82f6;
+  border-radius: 2px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.form-input,
+.form-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.checkbox:checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.form-help {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+/* Enhanced Days Grid Styling (matching staff modal) */
+.daily-schedule-section {
+  margin-top: 1.5rem;
+}
+
+.subsection-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subsection-title::before {
+  content: '';
+  width: 3px;
+  height: 1rem;
+  background: #059669;
+  border-radius: 2px;
+}
+
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.day-button {
+  padding: 1rem 0.5rem;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 4rem;
+}
+
+.day-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.day-button.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.day-button.selected {
+  background: #059669;
+  border-color: #059669;
+  color: white;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.day-short {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.day-full {
+  font-size: 0.625rem;
+  opacity: 0.8;
+}
+
+/* Time Customization Styling (matching staff modal) */
+.time-customization {
+  background: #fffbeb;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
 }
 
 .content-header h2 {
