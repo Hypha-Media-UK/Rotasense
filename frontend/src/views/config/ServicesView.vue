@@ -29,6 +29,35 @@ const selectedServiceDay = ref<DayOfWeek | null>(null)
 const serviceDayTimes = ref<Record<string, { startTime: string; endTime: string }>>({})
 const currentServiceDayTimes = ref({ startTime: '08:00', endTime: '20:00' })
 
+// Bulk day selection for operating hours
+const selectedDaysForBulk = ref<Set<DayOfWeek>>(new Set())
+const bulkTimeMode = ref(false)
+const bulkStartTime = ref('08:00')
+const bulkEndTime = ref('20:00')
+
+// Helper functions for localStorage persistence
+function getServiceTimesStorageKey(serviceId: number): string {
+  return `rotasense_service_times_${serviceId}`
+}
+
+function saveServiceTimesToStorage(serviceId: number, times: Record<string, { startTime: string; endTime: string }>) {
+  try {
+    localStorage.setItem(getServiceTimesStorageKey(serviceId), JSON.stringify(times))
+  } catch (error) {
+    console.warn('Failed to save service times to localStorage:', error)
+  }
+}
+
+function loadServiceTimesFromStorage(serviceId: number): Record<string, { startTime: string; endTime: string }> {
+  try {
+    const stored = localStorage.getItem(getServiceTimesStorageKey(serviceId))
+    return stored ? JSON.parse(stored) : {}
+  } catch (error) {
+    console.warn('Failed to load service times from localStorage:', error)
+    return {}
+  }
+}
+
 
 
 const isEditing = computed(() => editingService.value !== null)
@@ -57,11 +86,37 @@ function selectServiceDay(day: DayOfWeek) {
 function updateServiceDayTimes() {
   if (selectedServiceDay.value) {
     serviceDayTimes.value[selectedServiceDay.value] = { ...currentServiceDayTimes.value }
+
+    // Update the service's base times to match the current day's times
+    newService.value.startTime = currentServiceDayTimes.value.startTime
+    newService.value.endTime = currentServiceDayTimes.value.endTime
+
+    // Save to localStorage if editing an existing service
+    if (editingService.value) {
+      saveServiceTimesToStorage(editingService.value.id, serviceDayTimes.value)
+    }
   }
 }
 
 function formatDayName(day: DayOfWeek): string {
   return day.charAt(0).toUpperCase() + day.slice(1, 3)
+}
+
+function getServiceDayTimeDisplay(day: DayOfWeek): string {
+  // Check if there's a specific time set for this day
+  const dayTime = serviceDayTimes.value[day]
+  if (dayTime) {
+    return `${dayTime.startTime}-${dayTime.endTime}`
+  }
+
+  // Fall back to service default times
+  const startTime = newService.value.startTime || '08:00'
+  const endTime = newService.value.endTime || '20:00'
+  return `${startTime}-${endTime}`
+}
+
+function hasServiceDaySpecificTime(day: DayOfWeek): boolean {
+  return !!serviceDayTimes.value[day]
 }
 
 function getServiceScheduleDisplay(service: Service): string {
@@ -84,6 +139,12 @@ function resetFormData() {
   currentServiceDayTimes.value = { startTime: '08:00', endTime: '20:00' }
   editingService.value = null
   error.value = null
+
+  // Reset bulk selection state
+  selectedDaysForBulk.value.clear()
+  bulkTimeMode.value = false
+  bulkStartTime.value = '08:00'
+  bulkEndTime.value = '20:00'
 }
 
 function resetForm() {
@@ -108,10 +169,18 @@ function openEditForm(service: Service) {
     displayOnHome: service.displayOnHome
   }
 
-  // Reset day selection and times
+  // Load saved per-day times from localStorage
+  serviceDayTimes.value = loadServiceTimesFromStorage(service.id)
+
+  // Reset day selection
   selectedServiceDay.value = null
-  serviceDayTimes.value = {}
   currentServiceDayTimes.value = { startTime: service.startTime || '08:00', endTime: service.endTime || '20:00' }
+
+  // Reset bulk selection state
+  selectedDaysForBulk.value.clear()
+  bulkTimeMode.value = false
+  bulkStartTime.value = service.startTime || '08:00'
+  bulkEndTime.value = service.endTime || '20:00'
 
   showServiceForm.value = true
 }
@@ -151,12 +220,23 @@ async function deleteService(service: Service) {
 
   try {
     await configStore.deleteService(service.id)
+    // Clean up localStorage for this service
+    try {
+      localStorage.removeItem(getServiceTimesStorageKey(service.id))
+    } catch (error) {
+      console.warn('Failed to clean up service times from localStorage:', error)
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to delete service'
   }
 }
 
 function handleServiceDayClick(day: string) {
+  // If in bulk mode, don't use the old single-day logic
+  if (bulkTimeMode.value) {
+    return
+  }
+
   const dayOfWeek = day as DayOfWeek
   const isOperational = newService.value.operationalDays.includes(dayOfWeek)
 
@@ -179,6 +259,89 @@ function handleServiceDayClick(day: string) {
     newService.value.operationalDays.push(dayOfWeek)
     selectServiceDay(dayOfWeek)
   }
+}
+
+// Bulk day selection functions
+function toggleBulkMode() {
+  bulkTimeMode.value = !bulkTimeMode.value
+  if (bulkTimeMode.value) {
+    // When entering bulk mode, clear single day selection
+    selectedServiceDay.value = null
+    // Initialize bulk times with current default
+    bulkStartTime.value = newService.value.startTime || '08:00'
+    bulkEndTime.value = newService.value.endTime || '20:00'
+  } else {
+    // When exiting bulk mode, clear bulk selection
+    selectedDaysForBulk.value.clear()
+  }
+}
+
+function toggleDayForBulk(day: DayOfWeek) {
+  if (selectedDaysForBulk.value.has(day)) {
+    selectedDaysForBulk.value.delete(day)
+  } else {
+    selectedDaysForBulk.value.add(day)
+  }
+}
+
+function selectQuickPattern(pattern: 'weekdays' | 'weekend' | 'all' | 'none') {
+  selectedDaysForBulk.value.clear()
+
+  switch (pattern) {
+    case 'weekdays':
+      ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
+        selectedDaysForBulk.value.add(day as DayOfWeek)
+      })
+      break
+    case 'weekend':
+      ['saturday', 'sunday'].forEach(day => {
+        selectedDaysForBulk.value.add(day as DayOfWeek)
+      })
+      break
+    case 'all':
+      daysOfWeek.forEach(day => {
+        selectedDaysForBulk.value.add(day)
+      })
+      break
+    case 'none':
+      // Already cleared above
+      break
+  }
+}
+
+function applyBulkTimes() {
+  if (selectedDaysForBulk.value.size === 0) {
+    error.value = 'Please select at least one day to apply bulk times'
+    return
+  }
+
+  // Apply times to all selected days
+  selectedDaysForBulk.value.forEach(day => {
+    // Add to operational days if not already there
+    if (!newService.value.operationalDays.includes(day)) {
+      newService.value.operationalDays.push(day)
+    }
+
+    // Set the specific times for this day
+    serviceDayTimes.value[day] = {
+      startTime: bulkStartTime.value,
+      endTime: bulkEndTime.value
+    }
+  })
+
+  // Update the service's base times to match the bulk times
+  newService.value.startTime = bulkStartTime.value
+  newService.value.endTime = bulkEndTime.value
+
+  // Save to localStorage if editing an existing service
+  if (editingService.value) {
+    saveServiceTimesToStorage(editingService.value.id, serviceDayTimes.value)
+  }
+
+  // Clear selection and exit bulk mode
+  selectedDaysForBulk.value.clear()
+  bulkTimeMode.value = false
+  error.value = null
 }
 
 
@@ -250,29 +413,146 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
 
             <!-- Operational Days Configuration -->
             <div v-if="!newService.is24x7" class="operational-days-section">
-              <h4 class="subsection-title">Operating Days</h4>
-              <p class="form-help">Select the days this service operates</p>
+              <div class="schedule-header">
+                <div>
+                  <h4 class="subsection-title">Operating Days</h4>
+                  <p class="form-help">Select the days this service operates. Times shown below each day.</p>
+                  <p class="form-help-note">
+                    <strong>Note:</strong> Per-day times are displayed for reference but the service's base hours will be updated to match your most recent time setting.
+                    Individual day times are temporarily stored and will be preserved while editing this service.
+                  </p>
+                </div>
+                <div class="schedule-mode-toggle">
+                  <button
+                    type="button"
+                    @click="toggleBulkMode"
+                    class="bulk-mode-btn"
+                    :class="{ active: bulkTimeMode }"
+                  >
+                    {{ bulkTimeMode ? 'Exit Bulk Mode' : 'Bulk Time Setting' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Selection Patterns (only in bulk mode) -->
+              <div v-if="bulkTimeMode" class="quick-patterns">
+                <span class="quick-patterns-label">Quick select:</span>
+                <button type="button" @click="selectQuickPattern('weekdays')" class="quick-pattern-btn">
+                  Weekdays
+                </button>
+                <button type="button" @click="selectQuickPattern('weekend')" class="quick-pattern-btn">
+                  Weekend
+                </button>
+                <button type="button" @click="selectQuickPattern('all')" class="quick-pattern-btn">
+                  All Days
+                </button>
+                <button type="button" @click="selectQuickPattern('none')" class="quick-pattern-btn">
+                  Clear All
+                </button>
+              </div>
+
+              <!-- Days Grid -->
               <div class="days-grid">
-                <button
+                <div
                   v-for="day in daysOfWeek"
                   :key="day"
-                  type="button"
-                  @click="handleServiceDayClick(day)"
-                  class="day-button"
+                  class="day-container"
                   :class="{
-                    active: newService.operationalDays.includes(day),
-                    selected: selectedServiceDay === day && newService.operationalDays.includes(day)
+                    'bulk-mode': bulkTimeMode
                   }"
                 >
-                  <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
-                  <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
+                  <!-- Bulk Mode: Checkbox + Day Button -->
+                  <template v-if="bulkTimeMode">
+                    <label class="day-checkbox-label">
+                      <input
+                        type="checkbox"
+                        :checked="selectedDaysForBulk.has(day)"
+                        @change="toggleDayForBulk(day)"
+                        class="day-checkbox"
+                      >
+                      <div
+                        class="day-button bulk-day-button"
+                        :class="{
+                          active: newService.operationalDays.includes(day),
+                          'bulk-selected': selectedDaysForBulk.has(day),
+                          'has-custom-time': hasServiceDaySpecificTime(day)
+                        }"
+                      >
+                        <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
+                        <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
+                        <span v-if="newService.operationalDays.includes(day)" class="day-time">
+                          {{ getServiceDayTimeDisplay(day) }}
+                        </span>
+                      </div>
+                    </label>
+                  </template>
+
+                  <!-- Single Mode: Clickable Day Button -->
+                  <template v-else>
+                    <button
+                      type="button"
+                      @click="handleServiceDayClick(day)"
+                      class="day-button"
+                      :class="{
+                        active: newService.operationalDays.includes(day),
+                        selected: selectedServiceDay === day && newService.operationalDays.includes(day),
+                        'has-custom-time': hasServiceDaySpecificTime(day)
+                      }"
+                    >
+                      <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
+                      <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
+                      <span v-if="newService.operationalDays.includes(day)" class="day-time">
+                        {{ getServiceDayTimeDisplay(day) }}
+                      </span>
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bulk Time Setting Section -->
+          <div v-if="!newService.is24x7 && bulkTimeMode && selectedDaysForBulk.size > 0" class="form-section">
+            <h3 class="section-title">Bulk Time Setting</h3>
+            <p class="form-help">
+              Set operating hours for {{ selectedDaysForBulk.size }} selected day{{ selectedDaysForBulk.size !== 1 ? 's' : '' }}:
+              <strong>{{ Array.from(selectedDaysForBulk).map(d => formatDayName(d)).join(', ') }}</strong>
+            </p>
+
+            <div class="time-customization bulk-time-customization">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Start Time</label>
+                  <input
+                    v-model="bulkStartTime"
+                    type="time"
+                    class="form-input"
+                    required
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Time</label>
+                  <input
+                    v-model="bulkEndTime"
+                    type="time"
+                    class="form-input"
+                    required
+                  >
+                </div>
+              </div>
+              <div class="bulk-actions">
+                <button type="button" @click="applyBulkTimes" class="btn btn-primary">
+                  Apply to Selected Days
+                </button>
+                <button type="button" @click="selectedDaysForBulk.clear()" class="btn">
+                  Clear Selection
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- Time Customization Section -->
-          <div v-if="!newService.is24x7 && selectedServiceDay && newService.operationalDays.includes(selectedServiceDay)" class="form-section">
+          <!-- Single Day Time Customization Section -->
+          <div v-if="!newService.is24x7 && !bulkTimeMode && selectedServiceDay && newService.operationalDays.includes(selectedServiceDay)" class="form-section">
             <h3 class="section-title">{{ formatDayName(selectedServiceDay) }} Service Hours</h3>
             <p class="form-help">Set operating hours for {{ formatDayName(selectedServiceDay) }}</p>
 
@@ -566,6 +846,85 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
   margin-top: 1rem;
 }
 
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.schedule-mode-toggle {
+  flex-shrink: 0;
+}
+
+.bulk-mode-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #3b82f6;
+  background: white;
+  color: #3b82f6;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.bulk-mode-btn:hover {
+  background: #eff6ff;
+}
+
+.bulk-mode-btn.active {
+  background: #3b82f6;
+  color: white;
+}
+
+.quick-patterns {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.quick-patterns-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #0369a1;
+  margin-right: 0.5rem;
+}
+
+.quick-pattern-btn {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #0ea5e9;
+  background: white;
+  color: #0ea5e9;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-pattern-btn:hover {
+  background: #0ea5e9;
+  color: white;
+}
+
+.form-help-note {
+  font-size: 0.75rem;
+  color: #d97706;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #fffbeb;
+  border: 1px solid #fed7aa;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
 /* Enhanced Days Grid */
 .days-grid {
   display: grid;
@@ -574,8 +933,46 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
   margin-top: 1rem;
 }
 
+.day-container {
+  position: relative;
+}
+
+.day-container.bulk-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.day-checkbox-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  width: 100%;
+}
+
+.day-checkbox {
+  width: 1rem;
+  height: 1rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.bulk-day-button {
+  cursor: pointer;
+  width: 100%;
+}
+
+.bulk-day-button.bulk-selected {
+  background: #fef3c7 !important;
+  border-color: #f59e0b !important;
+  color: #92400e;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
 .day-button {
-  padding: 1rem 0.5rem;
+  padding: 0.75rem 0.5rem;
   border: 2px solid #e5e7eb;
   background: white;
   border-radius: 8px;
@@ -588,7 +985,7 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  min-height: 4rem;
+  min-height: 5rem;
 }
 
 .day-button:hover {
@@ -622,6 +1019,42 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
   opacity: 0.8;
 }
 
+.day-time {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-top: 0.125rem;
+  padding: 0.125rem 0.25rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.day-button.active .day-time {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.day-button.selected .day-time {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.day-button.bulk-selected .day-time {
+  color: #92400e;
+  background: rgba(146, 64, 14, 0.1);
+}
+
+.day-button.has-custom-time {
+  border-color: #f59e0b;
+}
+
+.day-button.has-custom-time .day-time {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  font-weight: 700;
+}
+
 /* Time Customization */
 .time-customization {
   background: #fffbeb;
@@ -629,6 +1062,44 @@ const daysOfWeek: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', '
   border-radius: 8px;
   padding: 1.5rem;
   margin-top: 1rem;
+}
+
+.bulk-time-customization {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: flex-start;
+}
+
+.bulk-actions .btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #d1d5db;
+  background: white;
+}
+
+.bulk-actions .btn-primary {
+  background: #059669;
+  border-color: #059669;
+  color: white;
+}
+
+.bulk-actions .btn-primary:hover {
+  background: #047857;
+  border-color: #047857;
+}
+
+.bulk-actions .btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 /* Error States */
