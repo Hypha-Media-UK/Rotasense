@@ -1,12 +1,32 @@
 <script setup lang="ts">
-import type { DepartmentStatus } from '@/types'
-import { computed } from 'vue'
+import type { DepartmentStatus, Staff } from '@/types'
+import { computed, ref } from 'vue'
+import StaffReassignmentModal from './StaffReassignmentModal.vue'
 
 interface Props {
   departmentStatus: DepartmentStatus
 }
 
 const props = defineProps<Props>()
+
+// Modal state
+const showReassignmentModal = ref(false)
+const selectedStaff = ref<Staff | null>(null)
+
+// Methods
+function openStaffReassignmentModal(staff: Staff) {
+  selectedStaff.value = staff
+  showReassignmentModal.value = true
+}
+
+function closeReassignmentModal() {
+  showReassignmentModal.value = false
+  selectedStaff.value = null
+}
+
+function isTemporaryAssignment(staffStatus: any) {
+  return staffStatus.override?.overrideType === 'TEMPORARY_ALLOCATION'
+}
 
 // Computed properties for enhanced UI
 const statusClass = computed(() => {
@@ -79,8 +99,24 @@ const organizedStaff = computed(() => {
             v-for="staffStatus in timeGroup.dayStaff"
             :key="staffStatus.staff.id"
             class="staff-item"
+            :class="{ 'staff-temporary': isTemporaryAssignment(staffStatus) }"
           >
-            <span class="staff-name">{{ staffStatus.staff.name }}</span>
+            <div class="staff-info">
+              <button
+                class="staff-name clickable-staff"
+                @click="openStaffReassignmentModal(staffStatus.staff)"
+                :title="'Click to reassign ' + staffStatus.staff.name"
+              >
+                {{ staffStatus.staff.name }}
+              </button>
+              <span
+                v-if="isTemporaryAssignment(staffStatus)"
+                class="temporary-badge"
+                title="Temporarily assigned from runner pool"
+              >
+                Temporary
+              </span>
+            </div>
             <span
               class="status-badge"
               :class="{
@@ -104,8 +140,24 @@ const organizedStaff = computed(() => {
             v-for="staffStatus in timeGroup.nightStaff"
             :key="staffStatus.staff.id"
             class="staff-item night-staff"
+            :class="{ 'staff-temporary': isTemporaryAssignment(staffStatus) }"
           >
-            <span class="staff-name">{{ staffStatus.staff.name }}</span>
+            <div class="staff-info">
+              <button
+                class="staff-name clickable-staff"
+                @click="openStaffReassignmentModal(staffStatus.staff)"
+                :title="'Click to reassign ' + staffStatus.staff.name"
+              >
+                {{ staffStatus.staff.name }}
+              </button>
+              <span
+                v-if="isTemporaryAssignment(staffStatus)"
+                class="temporary-badge"
+                title="Temporarily assigned from runner pool"
+              >
+                Temporary
+              </span>
+            </div>
             <span
               class="status-badge"
               :class="{
@@ -128,6 +180,66 @@ const organizedStaff = computed(() => {
       <p>No staff assigned</p>
     </div>
   </article>
+
+  <!-- Staff Reassignment Modal -->
+  <StaffReassignmentModal
+    :show="showReassignmentModal"
+    :staff="selectedStaff"
+    @close="closeReassignmentModal"
+  />
 </template>
+
+<style scoped>
+/* Clickable staff names */
+.clickable-staff {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  padding: 0.125rem 0.25rem;
+  margin: -0.125rem -0.25rem;
+}
+
+.clickable-staff:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  transform: translateY(-1px);
+}
+
+.clickable-staff:active {
+  transform: translateY(0);
+}
+
+/* Temporary assignment styling */
+.staff-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.staff-item.staff-temporary {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-left: 4px solid #10b981;
+}
+
+.temporary-badge {
+  font-size: 0.625rem;
+  color: #065f46;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.2);
+  padding: 0.125rem 0.375rem;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+}
+</style>
 
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useHomeStore } from '@/stores/home'
 import DateNavigation from '@/components/home/DateNavigation.vue'
 import DepartmentGrid from '@/components/home/DepartmentGrid.vue'
@@ -8,8 +8,21 @@ import RunnerPoolGrid from '@/components/home/RunnerPoolGrid.vue'
 
 const homeStore = useHomeStore()
 
+let autoExpireInterval: number | null = null
+
 onMounted(() => {
   homeStore.fetchOverrides()
+
+  // Set up auto-expire check every 5 minutes
+  autoExpireInterval = setInterval(() => {
+    homeStore.fetchOverrides() // This will trigger auto-expire check
+  }, 5 * 60 * 1000) // 5 minutes
+})
+
+onUnmounted(() => {
+  if (autoExpireInterval) {
+    clearInterval(autoExpireInterval)
+  }
 })
 </script>
 

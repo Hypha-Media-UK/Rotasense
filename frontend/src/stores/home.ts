@@ -421,6 +421,48 @@ export const useHomeStore = defineStore('home', () => {
     }
   }
 
+  // Helper function to check if an override should be auto-expired
+  function shouldAutoExpireOverride(override: DailyOverride): boolean {
+    const now = new Date()
+    const currentDate = format(now, 'yyyy-MM-dd')
+    const currentTime = now.getHours() * 60 + now.getMinutes()
+
+    // Check if past end date
+    if (override.endDate) {
+      const endDate = format(new Date(override.endDate), 'yyyy-MM-dd')
+      if (currentDate > endDate) {
+        return true
+      }
+    }
+
+    // Check if past end time on the current day
+    if (override.endTime && currentDate === format(new Date(override.date), 'yyyy-MM-dd')) {
+      const endTimeMinutes = parseTimeToMinutes(override.endTime)
+      if (currentTime > endTimeMinutes) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  // Auto-expire overrides that have lapsed
+  async function autoExpireOverrides() {
+    const expiredOverrides = dailyOverrides.value.filter(override =>
+      override.overrideType === 'TEMPORARY_ALLOCATION' &&
+      override.autoExpire &&
+      shouldAutoExpireOverride(override)
+    )
+
+    for (const override of expiredOverrides) {
+      try {
+        await deleteOverride(override.id)
+      } catch (err) {
+        console.error('Failed to auto-expire override:', override.id, err)
+      }
+    }
+  }
+
   // Actions
   async function fetchOverrides(date?: Date) {
     loading.value = true
@@ -431,6 +473,9 @@ export const useHomeStore = defineStore('home', () => {
       const dateString = format(targetDate, 'yyyy-MM-dd')
       const overrides = await apiService.getOverrides(dateString)
       dailyOverrides.value = overrides
+
+      // Auto-expire any overrides that have lapsed
+      await autoExpireOverrides()
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch overrides'
       console.error('Error fetching overrides:', err)

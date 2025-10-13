@@ -8,13 +8,16 @@ const router = express.Router();
 // Validation schemas
 const createOverrideSchema = z.object({
   date: z.string().datetime('Invalid date format'),
+  endDate: z.string().datetime('Invalid end date format').optional(),
   staffId: positiveIntSchema.describe('Staff ID is required'),
   departmentId: positiveIntSchema.optional(),
   serviceId: positiveIntSchema.optional(),
+  runnerPoolId: positiveIntSchema.optional(),
   overrideType: overrideTypeSchema,
   startTime: timeSchema.optional(),
   endTime: timeSchema.optional(),
-  reason: z.string().optional()
+  reason: z.string().optional(),
+  autoExpire: z.boolean().optional()
 }).refine(
   (data) => {
     if (data.overrideType === 'TEMPORARY_ALLOCATION') {
@@ -108,7 +111,8 @@ router.post('/', async (req, res) => {
     const override = await prisma.daily_overrides.create({
       data: {
         ...validatedData,
-        date: new Date(validatedData.date)
+        date: new Date(validatedData.date),
+        endDate: validatedData.endDate ? new Date(validatedData.endDate) : null
       },
       include: {
         staff: true,
@@ -148,6 +152,9 @@ router.put('/:id', async (req, res) => {
     const updateData: any = { ...validatedData };
     if (validatedData.date) {
       updateData.date = new Date(validatedData.date);
+    }
+    if (validatedData.endDate) {
+      updateData.endDate = new Date(validatedData.endDate);
     }
     
     const override = await prisma.daily_overrides.update({
