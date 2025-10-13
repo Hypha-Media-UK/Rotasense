@@ -14,6 +14,18 @@ export interface Building {
   updatedAt: string;
 }
 
+export interface MinimumStaffPeriod {
+  id: number;
+  departmentId?: number;
+  serviceId?: number;
+  startTime: string;
+  endTime: string;
+  minStaff: number;
+  daysOfWeek: DayOfWeek[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Department {
   id: number;
   name: string;
@@ -27,6 +39,7 @@ export interface Department {
   displayOnHome: boolean;
   staffAllocations?: StaffAllocation[];
   dailyOverrides?: DailyOverride[];
+  minimum_staff_periods?: MinimumStaffPeriod[];
   createdAt: string;
   updatedAt: string;
 }
@@ -42,6 +55,7 @@ export interface Service {
   displayOnHome: boolean;
   staffAllocations?: StaffAllocation[];
   dailyOverrides?: DailyOverride[];
+  minimum_staff_periods?: MinimumStaffPeriod[];
   createdAt: string;
   updatedAt: string;
 }
@@ -184,6 +198,15 @@ export interface CreateServiceForm {
   endTime: string;
   minStaff: number;
   displayOnHome?: boolean;
+}
+
+export interface CreateMinimumStaffPeriodForm {
+  departmentId?: number;
+  serviceId?: number;
+  startTime: string;
+  endTime: string;
+  minStaff: number;
+  daysOfWeek: DayOfWeek[];
 }
 
 export interface CreateStaffForm {

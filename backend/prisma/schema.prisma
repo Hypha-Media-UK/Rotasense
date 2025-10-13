@@ -58,6 +58,7 @@ model departments {
   buildings          buildings           @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   staff_allocations  staff_allocations[]
   runner_allocations runner_allocations[]
+  minimum_staff_periods minimum_staff_periods[]
 
   @@unique([name, buildingId])
   @@index([buildingId], map: "departments_buildingId_fkey")
@@ -77,6 +78,7 @@ model services {
   daily_overrides    daily_overrides[]
   staff_allocations  staff_allocations[]
   runner_allocations runner_allocations[]
+  minimum_staff_periods minimum_staff_periods[]
 }
 
 model settings {
@@ -184,4 +186,22 @@ enum staff_scheduleType {
 enum staff_shiftPattern {
   FIXED
   ROTATING_DAY_NIGHT
+}
+
+model minimum_staff_periods {
+  id           Int          @id @default(autoincrement())
+  departmentId Int?
+  serviceId    Int?
+  startTime    String       // e.g., "08:00"
+  endTime      String       // e.g., "12:00"
+  minStaff     Int
+  daysOfWeek   String       // JSON array: ["monday", "tuesday", ...]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  departments  departments? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  services     services?    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([departmentId], map: "minimum_staff_periods_departmentId_fkey")
+  @@index([serviceId], map: "minimum_staff_periods_serviceId_fkey")
 }

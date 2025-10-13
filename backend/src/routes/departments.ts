@@ -59,6 +59,9 @@ router.get('/', async (req, res) => {
           include: {
             staff: true
           }
+        },
+        minimum_staff_periods: {
+          orderBy: { startTime: 'asc' }
         }
       },
       orderBy: { name: 'asc' }
@@ -67,7 +70,11 @@ router.get('/', async (req, res) => {
     // Parse JSON strings back to arrays
     const departmentsWithParsedData = departments.map((dept: any) => ({
       ...dept,
-      operationalDays: JSON.parse(dept.operationalDays)
+      operationalDays: JSON.parse(dept.operationalDays),
+      minimum_staff_periods: dept.minimum_staff_periods.map((period: any) => ({
+        ...period,
+        daysOfWeek: JSON.parse(period.daysOfWeek)
+      }))
     }));
 
     res.json(departmentsWithParsedData);
@@ -93,6 +100,9 @@ router.get('/:id', async (req, res) => {
           include: {
             staff: true
           }
+        },
+        minimum_staff_periods: {
+          orderBy: { startTime: 'asc' }
         }
       }
     });
@@ -103,7 +113,11 @@ router.get('/:id', async (req, res) => {
 
     const departmentWithParsedData = {
       ...department,
-      operationalDays: JSON.parse(department.operationalDays)
+      operationalDays: JSON.parse(department.operationalDays),
+      minimum_staff_periods: department.minimum_staff_periods.map((period: any) => ({
+        ...period,
+        daysOfWeek: JSON.parse(period.daysOfWeek)
+      }))
     };
 
     res.json(departmentWithParsedData);

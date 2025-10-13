@@ -10,13 +10,15 @@ import type {
   Settings,
   RunnerPool,
   RunnerAllocation,
+  MinimumStaffPeriod,
   CreateBuildingForm,
   CreateDepartmentForm,
   CreateServiceForm,
   CreateStaffForm,
   CreateAllocationForm,
   CreateRunnerPoolForm,
-  CreateRunnerAllocationForm
+  CreateRunnerAllocationForm,
+  CreateMinimumStaffPeriodForm
 } from '@/types'
 
 export const useConfigStore = defineStore('config', () => {
@@ -28,6 +30,7 @@ export const useConfigStore = defineStore('config', () => {
   const allocations = ref<StaffAllocation[]>([])
   const runnerPools = ref<RunnerPool[]>([])
   const runnerAllocations = ref<RunnerAllocation[]>([])
+  const minimumStaffPeriods = ref<MinimumStaffPeriod[]>([])
 
   const settings = ref<Settings | null>(null)
   const loading = ref(false)
@@ -344,7 +347,41 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  // Minimum Staff Period actions
+  async function createMinimumStaffPeriod(data: CreateMinimumStaffPeriodForm) {
+    try {
+      const newPeriod = await apiService.createMinimumStaffPeriod(data)
+      minimumStaffPeriods.value.push(newPeriod)
+      return newPeriod
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to create minimum staff period'
+      throw err
+    }
+  }
 
+  async function updateMinimumStaffPeriod(id: number, data: Partial<CreateMinimumStaffPeriodForm>) {
+    try {
+      const updatedPeriod = await apiService.updateMinimumStaffPeriod(id, data)
+      const index = minimumStaffPeriods.value.findIndex(p => p.id === id)
+      if (index !== -1) {
+        minimumStaffPeriods.value[index] = updatedPeriod
+      }
+      return updatedPeriod
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to update minimum staff period'
+      throw err
+    }
+  }
+
+  async function deleteMinimumStaffPeriod(id: number) {
+    try {
+      await apiService.deleteMinimumStaffPeriod(id)
+      minimumStaffPeriods.value = minimumStaffPeriods.value.filter(p => p.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to delete minimum staff period'
+      throw err
+    }
+  }
 
   return {
     // State
@@ -355,6 +392,7 @@ export const useConfigStore = defineStore('config', () => {
     allocations,
     runnerPools,
     runnerAllocations,
+    minimumStaffPeriods,
 
     settings,
     loading,
@@ -390,6 +428,9 @@ export const useConfigStore = defineStore('config', () => {
     deleteRunnerPool,
     createRunnerAllocation,
     updateRunnerAllocation,
-    deleteRunnerAllocation
+    deleteRunnerAllocation,
+    createMinimumStaffPeriod,
+    updateMinimumStaffPeriod,
+    deleteMinimumStaffPeriod
   }
 })

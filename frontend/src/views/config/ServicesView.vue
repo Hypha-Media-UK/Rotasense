@@ -3,7 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Modal from '@/components/Modal.vue'
-import type { CreateServiceForm, Service, DayOfWeek } from '@/types'
+import DayConfiguration from '@/components/config/DayConfiguration.vue'
+import type { CreateServiceForm, Service, DayOfWeek, CreateMinimumStaffPeriodForm } from '@/types'
 
 const configStore = useConfigStore()
 
@@ -231,6 +232,58 @@ async function deleteService(service: Service) {
   }
 }
 
+// Minimum Staff Period handlers
+async function handleAddMinimumStaffPeriod(periodData: CreateMinimumStaffPeriodForm) {
+  try {
+    await configStore.createMinimumStaffPeriod(periodData)
+    // Refresh the service data to get updated periods
+    await configStore.fetchAllData()
+    // Update the editingService ref with fresh data
+    if (editingService.value) {
+      const updatedService = configStore.services.find(s => s.id === editingService.value!.id)
+      if (updatedService) {
+        editingService.value = updatedService
+      }
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to add minimum staff period'
+  }
+}
+
+async function handleUpdateMinimumStaffPeriod(id: number, periodData: Partial<CreateMinimumStaffPeriodForm>) {
+  try {
+    await configStore.updateMinimumStaffPeriod(id, periodData)
+    // Refresh the service data to get updated periods
+    await configStore.fetchAllData()
+    // Update the editingService ref with fresh data
+    if (editingService.value) {
+      const updatedService = configStore.services.find(s => s.id === editingService.value!.id)
+      if (updatedService) {
+        editingService.value = updatedService
+      }
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to update minimum staff period'
+  }
+}
+
+async function handleDeleteMinimumStaffPeriod(id: number) {
+  try {
+    await configStore.deleteMinimumStaffPeriod(id)
+    // Refresh the service data to get updated periods
+    await configStore.fetchAllData()
+    // Update the editingService ref with fresh data
+    if (editingService.value) {
+      const updatedService = configStore.services.find(s => s.id === editingService.value!.id)
+      if (updatedService) {
+        editingService.value = updatedService
+      }
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to delete minimum staff period'
+  }
+}
+
 function handleServiceDayClick(day: string) {
   // If in bulk mode, don't use the old single-day logic
   if (bulkTimeMode.value) {
@@ -385,17 +438,12 @@ onMounted(() => {
                 >
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Minimum Staff Required</label>
-                <input
-                  v-model.number="newService.minStaff"
-                  type="number"
-                  min="1"
-                  class="form-input"
-                  placeholder="e.g., 2"
-                  required
-                >
-                <p class="form-help">Minimum number of staff needed for this service</p>
+              <div class="form-group form-group-checkbox">
+                <label class="checkbox-label">
+                  <input v-model="newService.displayOnHome" type="checkbox" class="checkbox">
+                  Display on homepage
+                </label>
+                <p class="form-help">Show this service on the homepage even when no staff are allocated</p>
               </div>
             </div>
           </div>
@@ -404,7 +452,7 @@ onMounted(() => {
           <div class="form-section">
             <h3 class="section-title">Operation Schedule</h3>
 
-            <div class="form-group">
+            <div class="form-group form-group-checkbox">
               <label class="checkbox-label">
                 <input
                   v-model="newService.is24x7"
@@ -416,189 +464,25 @@ onMounted(() => {
               <p class="form-help">Enable this if the service operates 24 hours a day, 7 days a week</p>
             </div>
 
-            <!-- Operational Days Configuration -->
-            <div v-if="!newService.is24x7" class="operational-days-section">
-              <div class="schedule-header">
-                <div>
-                  <h4 class="subsection-title">Operating Days</h4>
-                  <p class="form-help">Select the days this service operates. Times shown below each day.</p>
-                  <p class="form-help-note">
-                    <strong>Note:</strong> Per-day times are displayed for reference but the service's base hours will be updated to match your most recent time setting.
-                    Individual day times are temporarily stored and will be preserved while editing this service.
-                  </p>
-                </div>
-                <div class="schedule-mode-toggle">
-                  <button
-                    type="button"
-                    @click="toggleBulkMode"
-                    class="bulk-mode-btn"
-                    :class="{ active: bulkTimeMode }"
-                  >
-                    {{ bulkTimeMode ? 'Exit Bulk Mode' : 'Bulk Time Setting' }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Quick Selection Patterns (only in bulk mode) -->
-              <div v-if="bulkTimeMode" class="quick-patterns">
-                <span class="quick-patterns-label">Quick select:</span>
-                <button type="button" @click="selectQuickPattern('weekdays')" class="quick-pattern-btn">
-                  Weekdays
-                </button>
-                <button type="button" @click="selectQuickPattern('weekend')" class="quick-pattern-btn">
-                  Weekend
-                </button>
-                <button type="button" @click="selectQuickPattern('all')" class="quick-pattern-btn">
-                  All Days
-                </button>
-                <button type="button" @click="selectQuickPattern('none')" class="quick-pattern-btn">
-                  Clear All
-                </button>
-              </div>
-
-              <!-- Days Grid -->
-              <div class="days-grid">
-                <div
-                  v-for="day in daysOfWeek"
-                  :key="day"
-                  class="day-container"
-                  :class="{
-                    'bulk-mode': bulkTimeMode
-                  }"
-                >
-                  <!-- Bulk Mode: Checkbox + Day Button -->
-                  <template v-if="bulkTimeMode">
-                    <label class="day-checkbox-label">
-                      <input
-                        type="checkbox"
-                        :checked="selectedDaysForBulk.has(day)"
-                        @change="toggleDayForBulk(day)"
-                        class="day-checkbox"
-                      >
-                      <div
-                        class="day-button bulk-day-button"
-                        :class="{
-                          active: newService.operationalDays.includes(day),
-                          'bulk-selected': selectedDaysForBulk.has(day),
-                          'has-custom-time': hasServiceDaySpecificTime(day)
-                        }"
-                      >
-                        <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
-                        <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
-                        <span v-if="newService.operationalDays.includes(day)" class="day-time">
-                          {{ getServiceDayTimeDisplay(day) }}
-                        </span>
-                      </div>
-                    </label>
-                  </template>
-
-                  <!-- Single Mode: Clickable Day Button -->
-                  <template v-else>
-                    <button
-                      type="button"
-                      @click="handleServiceDayClick(day)"
-                      class="day-button"
-                      :class="{
-                        active: newService.operationalDays.includes(day),
-                        selected: selectedServiceDay === day && newService.operationalDays.includes(day),
-                        'has-custom-time': hasServiceDaySpecificTime(day)
-                      }"
-                    >
-                      <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
-                      <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
-                      <span v-if="newService.operationalDays.includes(day)" class="day-time">
-                        {{ getServiceDayTimeDisplay(day) }}
-                      </span>
-                    </button>
-                  </template>
-                </div>
-              </div>
-            </div>
+            <!-- Day Configuration Component -->
+            <DayConfiguration
+              v-model:operational-days="newService.operationalDays"
+              v-model:default-start-time="newService.startTime"
+              v-model:default-end-time="newService.endTime"
+              :is24x7="newService.is24x7"
+              :periods="editingService?.minimum_staff_periods || []"
+              :service-id="editingService?.id"
+              @addPeriod="handleAddMinimumStaffPeriod"
+              @updatePeriod="handleUpdateMinimumStaffPeriod"
+              @deletePeriod="handleDeleteMinimumStaffPeriod"
+            />
           </div>
 
-          <!-- Bulk Time Setting Section -->
-          <div v-if="!newService.is24x7 && bulkTimeMode && selectedDaysForBulk.size > 0" class="form-section">
-            <h3 class="section-title">Bulk Time Setting</h3>
-            <p class="form-help">
-              Set operating hours for {{ selectedDaysForBulk.size }} selected day{{ selectedDaysForBulk.size !== 1 ? 's' : '' }}:
-              <strong>{{ Array.from(selectedDaysForBulk).map(d => formatDayName(d)).join(', ') }}</strong>
-            </p>
 
-            <div class="time-customization bulk-time-customization">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Start Time</label>
-                  <input
-                    v-model="bulkStartTime"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-                <div class="form-group">
-                  <label class="form-label">End Time</label>
-                  <input
-                    v-model="bulkEndTime"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-              </div>
-              <div class="bulk-actions">
-                <button type="button" @click="applyBulkTimes" class="btn btn-primary">
-                  Apply to Selected Days
-                </button>
-                <button type="button" @click="selectedDaysForBulk.clear()" class="btn">
-                  Clear Selection
-                </button>
-              </div>
-            </div>
-          </div>
 
-          <!-- Single Day Time Customization Section -->
-          <div v-if="!newService.is24x7 && !bulkTimeMode && selectedServiceDay && newService.operationalDays.includes(selectedServiceDay)" class="form-section">
-            <h3 class="section-title">{{ formatDayName(selectedServiceDay) }} Service Hours</h3>
-            <p class="form-help">Set operating hours for {{ formatDayName(selectedServiceDay) }}</p>
 
-            <div class="time-customization">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Start Time</label>
-                  <input
-                    v-model="currentServiceDayTimes.startTime"
-                    @input="updateServiceDayTimes"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-                <div class="form-group">
-                  <label class="form-label">End Time</label>
-                  <input
-                    v-model="currentServiceDayTimes.endTime"
-                    @input="updateServiceDayTimes"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Display Settings Section -->
-          <div class="form-section">
-            <h3 class="section-title">Display Settings</h3>
 
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input v-model="newService.displayOnHome" type="checkbox" class="checkbox">
-                <span class="checkbox-text">Display on Homepage</span>
-              </label>
-              <p class="form-help">Show this service on the homepage even when no staff are allocated</p>
-            </div>
-          </div>
         </form>
       </div>
 
@@ -772,6 +656,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.form-group-checkbox {
+  align-items: flex-start;
+}
+
+.form-group-checkbox .checkbox-label {
+  align-self: flex-start;
 }
 
 .form-label {

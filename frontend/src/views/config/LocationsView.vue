@@ -3,7 +3,8 @@ import { computed, ref, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import Modal from '@/components/Modal.vue'
-import type { CreateBuildingForm, CreateDepartmentForm, Building, Department, DayOfWeek } from '@/types'
+import DayConfiguration from '@/components/config/DayConfiguration.vue'
+import type { CreateBuildingForm, CreateDepartmentForm, Building, Department, DayOfWeek, CreateMinimumStaffPeriodForm } from '@/types'
 
 const configStore = useConfigStore()
 
@@ -351,6 +352,58 @@ async function deleteDepartment(department: Department) {
   }
 }
 
+// Minimum Staff Period handlers
+async function handleAddMinimumStaffPeriod(periodData: CreateMinimumStaffPeriodForm) {
+  try {
+    await configStore.createMinimumStaffPeriod(periodData)
+    // Refresh the department data to get updated periods
+    await configStore.fetchAllData()
+    // Update the editingDepartment ref with fresh data
+    if (editingDepartment.value) {
+      const updatedDept = configStore.departments.find(d => d.id === editingDepartment.value!.id)
+      if (updatedDept) {
+        editingDepartment.value = updatedDept
+      }
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to add minimum staff period'
+  }
+}
+
+async function handleUpdateMinimumStaffPeriod(id: number, periodData: Partial<CreateMinimumStaffPeriodForm>) {
+  try {
+    await configStore.updateMinimumStaffPeriod(id, periodData)
+    // Refresh the department data to get updated periods
+    await configStore.fetchAllData()
+    // Update the editingDepartment ref with fresh data
+    if (editingDepartment.value) {
+      const updatedDept = configStore.departments.find(d => d.id === editingDepartment.value!.id)
+      if (updatedDept) {
+        editingDepartment.value = updatedDept
+      }
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to update minimum staff period'
+  }
+}
+
+async function handleDeleteMinimumStaffPeriod(id: number) {
+  try {
+    await configStore.deleteMinimumStaffPeriod(id)
+    // Refresh the department data to get updated periods
+    await configStore.fetchAllData()
+    // Update the editingDepartment ref with fresh data
+    if (editingDepartment.value) {
+      const updatedDept = configStore.departments.find(d => d.id === editingDepartment.value!.id)
+      if (updatedDept) {
+        editingDepartment.value = updatedDept
+      }
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to delete minimum staff period'
+  }
+}
+
 function handleDeptDayClick(day: string) {
   // If in bulk mode, don't use the old single-day logic
   if (bulkTimeMode.value) {
@@ -636,13 +689,21 @@ onMounted(() => {
                   </option>
                 </select>
               </div>
+
+              <div class="form-group form-group-checkbox">
+                <label class="checkbox-label">
+                  <input v-model="newDepartment.displayOnHome" type="checkbox" class="checkbox">
+                  Display on homepage
+                </label>
+                <p class="form-help">Show this department on the homepage even when no staff are allocated</p>
+              </div>
             </div>
           </div>
 
           <!-- Operating Hours Section -->
           <div class="form-section">
             <h3 class="section-title">Operating Hours</h3>
-            <div class="form-group">
+            <div class="form-group form-group-checkbox">
               <label class="checkbox-label">
                 <input
                   v-model="newDepartment.is24x7"
@@ -654,193 +715,25 @@ onMounted(() => {
               <p class="form-help">Check this if the department operates 24 hours a day, 7 days a week.</p>
             </div>
 
-            <div v-if="!newDepartment.is24x7" class="daily-schedule-section">
-              <div class="schedule-header">
-                <div>
-                  <h4 class="subsection-title">Operational Days</h4>
-                  <p class="form-help">Select the days this department operates. Times shown below each day.</p>
-                  <p class="form-help-note">
-                    <strong>Note:</strong> Per-day times are displayed for reference but the department's base hours will be updated to match your most recent time setting.
-                    Individual day times are temporarily stored and will be preserved while editing this department.
-                  </p>
-                </div>
-                <div class="schedule-mode-toggle">
-                  <button
-                    type="button"
-                    @click="toggleBulkMode"
-                    class="bulk-mode-btn"
-                    :class="{ active: bulkTimeMode }"
-                  >
-                    {{ bulkTimeMode ? 'Exit Bulk Mode' : 'Bulk Time Setting' }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Quick Selection Patterns (only in bulk mode) -->
-              <div v-if="bulkTimeMode" class="quick-patterns">
-                <span class="quick-patterns-label">Quick select:</span>
-                <button type="button" @click="selectQuickPattern('weekdays')" class="quick-pattern-btn">
-                  Weekdays
-                </button>
-                <button type="button" @click="selectQuickPattern('weekend')" class="quick-pattern-btn">
-                  Weekend
-                </button>
-                <button type="button" @click="selectQuickPattern('all')" class="quick-pattern-btn">
-                  All Days
-                </button>
-                <button type="button" @click="selectQuickPattern('none')" class="quick-pattern-btn">
-                  Clear All
-                </button>
-              </div>
-
-              <!-- Days Grid -->
-              <div class="days-grid">
-                <div
-                  v-for="day in daysOfWeek"
-                  :key="day"
-                  class="day-container"
-                  :class="{
-                    'bulk-mode': bulkTimeMode
-                  }"
-                >
-                  <!-- Bulk Mode: Checkbox + Day Button -->
-                  <template v-if="bulkTimeMode">
-                    <label class="day-checkbox-label">
-                      <input
-                        type="checkbox"
-                        :checked="selectedDaysForBulk.has(day)"
-                        @change="toggleDayForBulk(day)"
-                        class="day-checkbox"
-                      >
-                      <div
-                        class="day-button bulk-day-button"
-                        :class="{
-                          active: newDepartment.operationalDays.includes(day),
-                          'bulk-selected': selectedDaysForBulk.has(day),
-                          'has-custom-time': hasDaySpecificTime(day)
-                        }"
-                      >
-                        <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
-                        <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
-                        <span v-if="newDepartment.operationalDays.includes(day)" class="day-time">
-                          {{ getDayTimeDisplay(day) }}
-                        </span>
-                      </div>
-                    </label>
-                  </template>
-
-                  <!-- Single Mode: Clickable Day Button -->
-                  <template v-else>
-                    <button
-                      type="button"
-                      @click="handleDeptDayClick(day)"
-                      class="day-button"
-                      :class="{
-                        active: newDepartment.operationalDays.includes(day),
-                        selected: selectedDeptDay === day && newDepartment.operationalDays.includes(day),
-                        'has-custom-time': hasDaySpecificTime(day)
-                      }"
-                    >
-                      <span class="day-short">{{ day.charAt(0).toUpperCase() + day.slice(1, 3) }}</span>
-                      <span class="day-full">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
-                      <span v-if="newDepartment.operationalDays.includes(day)" class="day-time">
-                        {{ getDayTimeDisplay(day) }}
-                      </span>
-                    </button>
-                  </template>
-                </div>
-              </div>
-            </div>
+            <!-- Day Configuration Component -->
+            <DayConfiguration
+              v-model:operational-days="newDepartment.operationalDays"
+              v-model:default-start-time="newDepartment.startTime"
+              v-model:default-end-time="newDepartment.endTime"
+              :is24x7="newDepartment.is24x7"
+              :periods="editingDepartment?.minimum_staff_periods || []"
+              :department-id="editingDepartment?.id"
+              @addPeriod="handleAddMinimumStaffPeriod"
+              @updatePeriod="handleUpdateMinimumStaffPeriod"
+              @deletePeriod="handleDeleteMinimumStaffPeriod"
+            />
           </div>
 
-          <!-- Bulk Time Setting Section -->
-          <div v-if="!newDepartment.is24x7 && bulkTimeMode && selectedDaysForBulk.size > 0" class="form-section">
-            <h3 class="section-title">Bulk Time Setting</h3>
-            <p class="form-help">
-              Set operating hours for {{ selectedDaysForBulk.size }} selected day{{ selectedDaysForBulk.size !== 1 ? 's' : '' }}:
-              <strong>{{ Array.from(selectedDaysForBulk).map(d => formatDayName(d)).join(', ') }}</strong>
-            </p>
 
-            <div class="time-customization bulk-time-customization">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Start Time</label>
-                  <input
-                    v-model="bulkStartTime"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-                <div class="form-group">
-                  <label class="form-label">End Time</label>
-                  <input
-                    v-model="bulkEndTime"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-              </div>
-              <div class="bulk-actions">
-                <button type="button" @click="applyBulkTimes" class="btn btn-primary">
-                  Apply to Selected Days
-                </button>
-                <button type="button" @click="selectedDaysForBulk.clear()" class="btn">
-                  Clear Selection
-                </button>
-              </div>
-            </div>
-          </div>
 
-          <!-- Single Day Time Customization Section -->
-          <div v-if="!newDepartment.is24x7 && !bulkTimeMode && selectedDeptDay && newDepartment.operationalDays.includes(selectedDeptDay)" class="form-section">
-            <h3 class="section-title">{{ formatDayName(selectedDeptDay) }} Operating Hours</h3>
-            <p class="form-help">Set operating hours for {{ formatDayName(selectedDeptDay) }}</p>
 
-            <div class="time-customization">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Start Time</label>
-                  <input
-                    v-model="currentDeptDayTimes.startTime"
-                    @input="updateDeptDayTimes"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-                <div class="form-group">
-                  <label class="form-label">End Time</label>
-                  <input
-                    v-model="currentDeptDayTimes.endTime"
-                    @input="updateDeptDayTimes"
-                    type="time"
-                    class="form-input"
-                    required
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Configuration Section -->
-          <div class="form-section">
-            <h3 class="section-title">Configuration</h3>
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Minimum Staff</label>
-                <input v-model.number="newDepartment.minStaff" type="number" min="0" class="form-input" required>
-              </div>
 
-              <div class="form-group">
-                <label class="checkbox-label">
-                  <input v-model="newDepartment.displayOnHome" type="checkbox" class="checkbox">
-                  Display on homepage (show even without staff)
-                </label>
-              </div>
-            </div>
-          </div>
         </form>
       </div>
 
@@ -1126,6 +1019,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.form-group-checkbox {
+  align-items: flex-start;
+}
+
+.form-group-checkbox .checkbox-label {
+  align-self: flex-start;
 }
 
 .form-label {

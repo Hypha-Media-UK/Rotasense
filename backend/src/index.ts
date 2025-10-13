@@ -15,6 +15,7 @@ import overrideRoutes from './routes/overrides';
 import settingsRoutes from './routes/settings';
 import runnerPoolRoutes from './routes/runnerPools';
 import runnerAllocationRoutes from './routes/runnerAllocations';
+import minimumStaffPeriodRoutes from './routes/minimum-staff-periods';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -50,6 +51,7 @@ app.use('/api/overrides', overrideRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/runner-pools', runnerPoolRoutes);
 app.use('/api/runner-allocations', runnerAllocationRoutes);
+app.use('/api/minimum-staff-periods', minimumStaffPeriodRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

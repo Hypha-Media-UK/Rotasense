@@ -8,6 +8,7 @@ import type {
   Settings,
   RunnerPool,
   RunnerAllocation,
+  MinimumStaffPeriod,
   CreateBuildingForm,
   CreateDepartmentForm,
   CreateServiceForm,
@@ -15,7 +16,8 @@ import type {
   CreateAllocationForm,
   CreateOverrideForm,
   CreateRunnerPoolForm,
-  CreateRunnerAllocationForm
+  CreateRunnerAllocationForm,
+  CreateMinimumStaffPeriodForm
 } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -339,6 +341,42 @@ class ApiService {
 
   async deleteRunnerAllocation(id: number): Promise<void> {
     return this.request<void>(`/api/runner-allocations/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Minimum Staff Periods
+  async getMinimumStaffPeriods(departmentId?: number, serviceId?: number): Promise<MinimumStaffPeriod[]> {
+    const params = new URLSearchParams();
+    if (departmentId) params.append('departmentId', departmentId.toString());
+    if (serviceId) params.append('serviceId', serviceId.toString());
+
+    const queryString = params.toString();
+    const endpoint = queryString ? `/api/minimum-staff-periods?${queryString}` : '/api/minimum-staff-periods';
+
+    return this.request<MinimumStaffPeriod[]>(endpoint);
+  }
+
+  async getMinimumStaffPeriod(id: number): Promise<MinimumStaffPeriod> {
+    return this.request<MinimumStaffPeriod>(`/api/minimum-staff-periods/${id}`);
+  }
+
+  async createMinimumStaffPeriod(data: CreateMinimumStaffPeriodForm): Promise<MinimumStaffPeriod> {
+    return this.request<MinimumStaffPeriod>('/api/minimum-staff-periods', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMinimumStaffPeriod(id: number, data: Partial<CreateMinimumStaffPeriodForm>): Promise<MinimumStaffPeriod> {
+    return this.request<MinimumStaffPeriod>(`/api/minimum-staff-periods/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMinimumStaffPeriod(id: number): Promise<void> {
+    return this.request<void>(`/api/minimum-staff-periods/${id}`, {
       method: 'DELETE',
     });
   }
