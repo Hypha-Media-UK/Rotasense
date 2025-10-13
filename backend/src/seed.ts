@@ -80,7 +80,7 @@ async function main() {
 
   // Create buildings and departments
   for (const buildingData of buildingsData) {
-    const building = await prisma.building.upsert({
+    const building = await prisma.buildings.upsert({
       where: { name: buildingData.name },
       update: {},
       create: {
@@ -93,7 +93,7 @@ async function main() {
     // Create departments for this building
     for (let i = 0; i < buildingData.departments.length; i++) {
       const deptName = buildingData.departments[i];
-      await prisma.department.upsert({
+      await prisma.departments.upsert({
         where: {
           name_buildingId: {
             name: deptName,
@@ -156,6 +156,15 @@ async function main() {
       defaultStartTime: '08:00',
       defaultEndTime: '20:00',
       contractedDays: JSON.stringify([]) // Empty for shift cycles
+    },
+    // Test overnight shift staff member
+    {
+      name: 'Nicola Benger',
+      category: 'REGULAR' as const,
+      scheduleType: 'DAILY' as const,
+      defaultStartTime: '13:00',
+      defaultEndTime: '01:00',
+      contractedDays: JSON.stringify(['monday', 'tuesday', 'wednesday', 'thursday', 'friday'])
     }
   ];
 
@@ -177,7 +186,7 @@ async function main() {
   ];
 
   for (const service of services) {
-    await prisma.service.upsert({
+    await prisma.services.upsert({
       where: { name: service.name },
       update: {
         displayOnHome: false
@@ -219,7 +228,7 @@ async function main() {
   ];
 
   for (const allocation of sampleAllocations) {
-    await prisma.staffAllocation.create({
+    await prisma.staff_allocations.create({
       data: allocation
     });
   }

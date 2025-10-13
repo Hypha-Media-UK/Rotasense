@@ -312,6 +312,38 @@ export const useHomeStore = defineStore('home', () => {
     return calculateTimeStatus(staff, new Date()) === 'active'
   }
 
+  // Helper function to check if staff is scheduled to work later today
+  function isStaffScheduledToWorkLaterToday(staff: any, currentDateTime: Date): boolean {
+    const currentTime = currentDateTime.getHours() * 60 + currentDateTime.getMinutes()
+    const startTime = parseTimeToMinutes(staff.defaultStartTime || '08:00')
+    const endTime = parseTimeToMinutes(staff.defaultEndTime || '20:00')
+
+    // For overnight shifts, check if their start time is later today
+    const isOvernightShift = endTime < startTime
+
+    if (isOvernightShift) {
+      // If current time is before start time, they have a shift starting later today
+      const result = currentTime < startTime
+
+
+
+      return result
+    }
+
+    // For regular shifts, check if they're scheduled today and start time is in the future
+    const currentDayOfWeek = format(currentDateTime, 'EEEE').toLowerCase() as DayOfWeek
+
+    if (staff.scheduleType === 'DAILY') {
+      // Check if they're contracted to work today and start time hasn't passed
+      return staff.contractedDays.includes(currentDayOfWeek) && currentTime < startTime
+    } else if (staff.scheduleType === 'SHIFT_CYCLE') {
+      // Check if they're on shift today and start time hasn't passed
+      return calculateShiftStatus(staff, currentDateTime) && currentTime < startTime
+    }
+
+    return false
+  }
+
   // Helper function to parse time string to minutes since midnight
   function parseTimeToMinutes(timeString: string): number {
     const [hoursStr, minutesStr] = timeString.split(':')
@@ -319,6 +351,41 @@ export const useHomeStore = defineStore('home', () => {
     const minutes = parseInt(minutesStr || '0') || 0
     return hours * 60 + minutes
   }
+
+  // Test function for overnight shift logic (for development/debugging)
+  function testOvernightShiftLogic() {
+    const testStaff = {
+      name: 'Test Overnight Staff',
+      defaultStartTime: '13:00',
+      defaultEndTime: '01:00',
+      scheduleType: 'DAILY',
+      contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+    }
+
+    const testTimes = [
+      '08:00', // Should be 'scheduled' (before shift start)
+      '12:00', // Should be 'scheduled' (before shift start)
+      '13:00', // Should be 'active' (shift start)
+      '18:00', // Should be 'active' (during shift)
+      '23:00', // Should be 'active' (during shift)
+      '01:00', // Should be 'active' (shift end)
+      '02:00', // Should be 'off-duty' (after shift, no more shifts today)
+      '06:00'  // Should be 'off-duty' (after shift, no more shifts today)
+    ]
+
+    console.log('Testing overnight shift logic for 13:00-01:00 shift:')
+    testTimes.forEach(timeStr => {
+      const [hours, minutes] = timeStr.split(':').map(Number)
+      const testDate = new Date()
+      testDate.setHours(hours, minutes, 0, 0)
+
+      const result = calculateTimeStatus(testStaff, testDate)
+      console.log(`${timeStr}: ${result}`)
+    })
+  }
+
+  // Expose test function for development
+  ;(window as any).testOvernightShiftLogic = testOvernightShiftLogic
 
   // Helper function to calculate time-based status with overnight shift support
   function calculateTimeStatus(staff: any, currentDateTime: Date): string {
@@ -335,7 +402,12 @@ export const useHomeStore = defineStore('home', () => {
         return 'active'
       } else {
         // Between end time and start time (the gap period)
-        return 'off-duty'
+        // Check if staff is scheduled to work later today
+        if (isStaffScheduledToWorkLaterToday(staff, currentDateTime)) {
+          return 'scheduled' // They have a shift starting later today
+        } else {
+          return 'off-duty' // They're not scheduled to work again today
+        }
       }
     } else {
       // Normal day shift logic
