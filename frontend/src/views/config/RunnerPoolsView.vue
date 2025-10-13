@@ -163,11 +163,7 @@ async function deletePool(pool: RunnerPool) {
     </section>
 
     <!-- Create/Edit Modal -->
-    <Modal v-if="showCreateForm" @close="resetForm">
-      <template #header>
-        <h2>{{ formTitle }}</h2>
-      </template>
-
+    <Modal :show="showCreateForm" :title="formTitle" @close="resetForm">
       <form @submit.prevent="savePool" class="pool-form">
         <div v-if="error" class="error-message">
           {{ error }}
@@ -175,7 +171,7 @@ async function deletePool(pool: RunnerPool) {
 
         <div class="form-section">
           <h3 class="section-title">Basic Information</h3>
-          
+
           <div class="form-group">
             <label class="form-label">Pool Name</label>
             <input v-model="newPool.name" type="text" class="form-input" required placeholder="e.g., General Runners">
@@ -183,14 +179,14 @@ async function deletePool(pool: RunnerPool) {
 
           <div class="form-group">
             <label class="form-label">Description</label>
-            <textarea v-model="newPool.description" class="form-textarea" rows="3" 
+            <textarea v-model="newPool.description" class="form-textarea" rows="3"
               placeholder="Optional description of this runner pool's purpose"></textarea>
           </div>
         </div>
 
         <div class="form-section">
           <h3 class="section-title">Display Settings</h3>
-          
+
           <div class="form-group">
             <label class="checkbox-label">
               <input v-model="newPool.displayOnHome" type="checkbox" class="checkbox">
@@ -201,7 +197,7 @@ async function deletePool(pool: RunnerPool) {
 
           <div class="form-group">
             <label class="form-label">Display Order</label>
-            <input v-model.number="newPool.displayOrder" type="number" class="form-input" min="0" 
+            <input v-model.number="newPool.displayOrder" type="number" class="form-input" min="0"
               placeholder="0 = first, higher numbers appear later">
             <p class="form-help">Controls the order in which runner pools appear on the homepage</p>
           </div>
@@ -542,13 +538,13 @@ async function deletePool(pool: RunnerPool) {
   .config-content {
     padding: 1rem;
   }
-  
+
   .content-header {
     flex-direction: column;
     align-items: stretch;
     gap: 1rem;
   }
-  
+
   .pools-grid {
     grid-template-columns: 1fr;
   }

@@ -45,12 +45,19 @@ export const useHomeStore = defineStore('home', () => {
 
     return configStore.staff
       .filter(staff => {
-        // Only include staff who are actually scheduled to work on the selected date
+        // Check if staff is scheduled to work on the selected date
         if (staff.scheduleType === 'SHIFT_CYCLE') {
           return calculateShiftStatus(staff, selectedDate.value)
         } else if (staff.scheduleType === 'DAILY') {
           return staff.contractedDays.includes(selectedDayOfWeek.value)
         }
+
+        // For runner pool staff without proper schedule configuration, include them
+        // This handles edge cases where runner pool staff might not have schedules set up
+        if (staff.runnerPoolId && !staff.scheduleType) {
+          return true
+        }
+
         return false
       })
       .map(staff => {

@@ -54,7 +54,9 @@ const updateStaffSchema = z.object({
   zeroStartDateId: zeroStartDateIdSchema.optional(),
   defaultStartTime: timeSchema.optional(),
   defaultEndTime: timeSchema.optional(),
-  contractedDays: daysOfWeekSchema.optional()
+  contractedDays: daysOfWeekSchema.optional(),
+  isNightStaff: z.boolean().optional(),
+  runnerPoolId: z.union([z.number().int().positive(), z.null()]).optional()
 }).refine(
   (data) => {
     // If scheduleType is SHIFT_CYCLE, require shift cycle fields

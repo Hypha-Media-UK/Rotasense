@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { prisma } from '../index';
-import { nonEmptyStringSchema, optionalPositiveIntSchema } from '../validation/schemas';
+import { nonEmptyStringSchema, optionalNonNegativeIntSchema } from '../validation/schemas';
 
 const router = express.Router();
 
@@ -10,7 +10,7 @@ const createRunnerPoolSchema = z.object({
   name: nonEmptyStringSchema.describe('Runner pool name is required'),
   description: z.string().optional(),
   displayOnHome: z.boolean().optional(),
-  displayOrder: optionalPositiveIntSchema
+  displayOrder: optionalNonNegativeIntSchema
 });
 
 const updateRunnerPoolSchema = createRunnerPoolSchema.partial();
