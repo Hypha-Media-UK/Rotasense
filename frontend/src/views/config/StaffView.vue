@@ -26,7 +26,7 @@ const newStaff = ref<CreateStaffForm>({
   defaultStartTime: '08:00',
   defaultEndTime: '20:00',
   contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-  runnerPoolId: undefined
+  runnerPoolId: null
 })
 
 // Day-based time scheduling
@@ -123,7 +123,7 @@ function resetFormData() {
     defaultStartTime: '08:00',
     defaultEndTime: '20:00',
     contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-    runnerPoolId: undefined
+    runnerPoolId: null
   }
   selectedDay.value = null
   dayTimes.value = {}
@@ -552,7 +552,7 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
             <div class="form-group">
               <label class="form-label">Runner Pool</label>
               <select v-model="newStaff.runnerPoolId" class="form-select">
-                <option :value="undefined">No runner pool assignment</option>
+                <option :value="null">No runner pool assignment</option>
                 <option v-for="pool in configStore.runnerPools" :key="pool.id" :value="pool.id">
                   {{ pool.name }}
                   <span v-if="pool.description"> - {{ pool.description }}</span>

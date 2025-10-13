@@ -64,7 +64,7 @@ export interface Staff {
   contractedDays: DayOfWeek[]; // For DAILY schedule type
 
   // Runner pool assignment
-  runnerPoolId?: number;
+  runnerPoolId?: number | null;
   runnerPool?: RunnerPool;
 
   allocations?: StaffAllocation[];
@@ -196,7 +196,7 @@ export interface CreateStaffForm {
   defaultStartTime?: string;
   defaultEndTime?: string;
   contractedDays: DayOfWeek[];
-  runnerPoolId?: number;
+  runnerPoolId?: number | null;
 }
 
 export interface CreateAllocationForm {
