@@ -137,7 +137,7 @@ export const useHomeStore = defineStore('home', () => {
 
 
       // Calculate shift type for rotating supervisors
-      let currentShiftType = 'day' // default
+      let currentShiftType: 'day' | 'night' = 'day' // default
       if (staff.scheduleType === 'SHIFT_CYCLE') {
         const zeroStartDate = getZeroStartDate(staff.zeroStartDateId, configStore.settings)
         if (zeroStartDate) {

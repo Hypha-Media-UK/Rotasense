@@ -130,6 +130,13 @@ export function getStaffShiftType(
   targetDate: Date,
   zeroDate: Date
 ): 'day' | 'night' {
+  // For supervisors, use the enhanced supervisor logic
+  if (staff.category === 'SUPERVISOR') {
+    const supervisorShiftType = getSupervisorShiftType(staff, targetDate, zeroDate);
+    return supervisorShiftType || 'day'; // Default to day if not on duty
+  }
+
+  // For rotating supervisors (legacy support)
   if (staff.shiftPattern === 'ROTATING_DAY_NIGHT') {
     const shiftInfo = calculateSupervisorShiftInfo(staff, targetDate, zeroDate);
     return shiftInfo.shiftType;
@@ -140,9 +147,106 @@ export function getStaffShiftType(
 
 /**
  * Check if a staff member is a rotating supervisor
+ * Now includes supervisors using regular shift patterns for enhanced display
  */
 export function isRotatingSupervisor(staff: Staff): boolean {
-  return staff.category === 'SUPERVISOR' && staff.shiftPattern === 'ROTATING_DAY_NIGHT';
+  return staff.category === 'SUPERVISOR' &&
+         (staff.shiftPattern === 'ROTATING_DAY_NIGHT' || staff.scheduleType === 'SHIFT_CYCLE');
+}
+
+/**
+ * Get supervisors working day shifts on the target date
+ * Uses the 16-day mega-cycle for rotating supervisors
+ */
+export function getDaySupervisorsForDate(
+  allSupervisors: Staff[],
+  targetDate: Date,
+  zeroDate: Date
+): Staff[] {
+  return allSupervisors.filter(supervisor => {
+    // Only process supervisors
+    if (supervisor.category !== 'SUPERVISOR') {
+      return false;
+    }
+
+    // For rotating supervisors (the main supervisor pattern)
+    if (supervisor.shiftPattern === 'ROTATING_DAY_NIGHT') {
+      const shiftInfo = calculateSupervisorShiftInfo(supervisor, targetDate, zeroDate);
+      return shiftInfo.isOnDuty && shiftInfo.shiftType === 'day';
+    }
+
+    // For fixed supervisors (fallback), use regular shift calculation
+    if (supervisor.shiftPattern === 'FIXED') {
+      const isOnDuty = calculateEnhancedShiftStatus(supervisor, targetDate, zeroDate);
+      return isOnDuty && !supervisor.isNightStaff; // Day supervisors have isNightStaff = false
+    }
+
+    return false;
+  });
+}
+
+/**
+ * Get supervisors working night shifts that START on the target date
+ * Uses the 16-day mega-cycle for rotating supervisors
+ */
+export function getNightSupervisorsForDate(
+  allSupervisors: Staff[],
+  targetDate: Date,
+  zeroDate: Date
+): Staff[] {
+  return allSupervisors.filter(supervisor => {
+    // Only process supervisors
+    if (supervisor.category !== 'SUPERVISOR') {
+      return false;
+    }
+
+    // For rotating supervisors (the main supervisor pattern)
+    if (supervisor.shiftPattern === 'ROTATING_DAY_NIGHT') {
+      const shiftInfo = calculateSupervisorShiftInfo(supervisor, targetDate, zeroDate);
+      return shiftInfo.isOnDuty && shiftInfo.shiftType === 'night';
+    }
+
+    // For fixed supervisors (fallback), use regular shift calculation
+    if (supervisor.shiftPattern === 'FIXED') {
+      const isOnDuty = calculateEnhancedShiftStatus(supervisor, targetDate, zeroDate);
+      return isOnDuty && supervisor.isNightStaff; // Night supervisors have isNightStaff = true
+    }
+
+    return false;
+  });
+}
+
+/**
+ * Enhanced supervisor shift type calculation that supports both regular and rotating patterns
+ */
+export function getSupervisorShiftType(
+  supervisor: Staff,
+  targetDate: Date,
+  zeroDate: Date
+): 'day' | 'night' | null {
+  // Only process supervisors
+  if (supervisor.category !== 'SUPERVISOR') {
+    return null;
+  }
+
+  // Check if supervisor is on duty
+  const isOnDuty = calculateEnhancedShiftStatus(supervisor, targetDate, zeroDate);
+  if (!isOnDuty) {
+    return null;
+  }
+
+  // For supervisors using regular shift patterns, use isNightStaff flag
+  if (supervisor.shiftPattern === 'FIXED') {
+    return supervisor.isNightStaff ? 'night' : 'day';
+  }
+
+  // For rotating supervisors, use the existing logic
+  if (supervisor.shiftPattern === 'ROTATING_DAY_NIGHT') {
+    const shiftInfo = calculateSupervisorShiftInfo(supervisor, targetDate, zeroDate);
+    return shiftInfo.shiftType;
+  }
+
+  return null;
 }
 
 /**

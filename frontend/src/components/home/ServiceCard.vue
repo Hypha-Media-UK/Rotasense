@@ -2,6 +2,9 @@
 import type { ServiceStatus, Staff } from '@/types'
 import { computed, ref } from 'vue'
 import StaffReassignmentModal from './StaffReassignmentModal.vue'
+import { getDaySupervisorsForDate, getNightSupervisorsForDate } from '@/utils/shiftCalculations'
+import { useConfigStore } from '@/stores/config'
+import { useHomeStore } from '@/stores/home'
 
 interface Props {
   serviceStatus: ServiceStatus
@@ -53,10 +56,19 @@ const statusText = computed(() => {
 })
 
 // Helper function to get display hours based on shift type
-function getDisplayHours(staffStatus: any): string {
+function getDisplayHours(staffStatus: any, isInNightSection: boolean = false): string {
   const staff = staffStatus.staff
 
-  // For rotating supervisors, show hours based on current shift type
+  // For supervisors, show appropriate hours based on section
+  if (staff.category === 'SUPERVISOR') {
+    if (isInNightSection) {
+      return '20:00 - 08:00'
+    } else {
+      return '08:00 - 20:00'
+    }
+  }
+
+  // For rotating supervisors (legacy), show hours based on current shift type
   if (staffStatus.isRotatingSchedule && staffStatus.currentShiftType === 'night') {
     return '20:00 - 08:00'
   }
@@ -66,7 +78,7 @@ function getDisplayHours(staffStatus: any): string {
     return '20:00 - 08:00'
   }
 
-  // Default to day hours
+  // Default to contracted hours
   return `${staff.defaultStartTime} - ${staff.defaultEndTime}`
 }
 
@@ -83,6 +95,8 @@ function sortStaffWithSupervisorsFirst(staff: any[]): any[] {
 
 // Organize staff by shift start time and day/night
 const organizedStaff = computed(() => {
+  const configStore = useConfigStore()
+  const homeStore = useHomeStore()
   const staffByTime = new Map()
 
   props.serviceStatus.assignedStaff.forEach(staffStatus => {
@@ -92,13 +106,56 @@ const organizedStaff = computed(() => {
       staffByTime.set(startTime, { dayStaff: [], nightStaff: [] })
     }
 
-    // Use currentShiftType for rotating supervisors, fallback to isNightStaff
-    const isCurrentlyNightShift = staffStatus.currentShiftType === 'night'
+    // For supervisors, use enhanced logic to support both day and night display
+    if (staffStatus.staff.category === 'SUPERVISOR') {
+      // Get all supervisors assigned to this service
+      const allSupervisors = props.serviceStatus.assignedStaff
+        .map(s => s.staff)
+        .filter(s => s.category === 'SUPERVISOR')
 
-    if (isCurrentlyNightShift) {
-      staffByTime.get(startTime).nightStaff.push(staffStatus)
+      // Get zero start date (use default if staff doesn't have one)
+      const zeroStartDateId = staffStatus.staff.zeroStartDateId || 'default'
+      const zeroStartDates = configStore.settings?.zeroStartDates || []
+      const zeroStartDateEntry = zeroStartDates.find((zsd: any) => zsd.id === zeroStartDateId)
+
+      if (zeroStartDateEntry?.date) {
+        const [year, month, day] = zeroStartDateEntry.date.split('-').map(Number)
+        if (year && month && day) {
+          const zeroStartDate = new Date(year, month - 1, day)
+
+        // Check if this supervisor should appear in day section
+        const daySupervisors = getDaySupervisorsForDate(allSupervisors, homeStore.selectedDate, zeroStartDate)
+        const isDaySuper = daySupervisors.some(s => s.id === staffStatus.staff.id)
+
+        // Check if this supervisor should appear in night section
+        const nightSupervisors = getNightSupervisorsForDate(allSupervisors, homeStore.selectedDate, zeroStartDate)
+        const isNightSuper = nightSupervisors.some(s => s.id === staffStatus.staff.id)
+
+        if (isDaySuper) {
+          staffByTime.get(startTime).dayStaff.push(staffStatus)
+        }
+        if (isNightSuper) {
+          staffByTime.get(startTime).nightStaff.push(staffStatus)
+        }
+        }
+      } else {
+        // Fallback to current logic if no zero start date
+        const isCurrentlyNightShift = staffStatus.currentShiftType === 'night'
+        if (isCurrentlyNightShift) {
+          staffByTime.get(startTime).nightStaff.push(staffStatus)
+        } else {
+          staffByTime.get(startTime).dayStaff.push(staffStatus)
+        }
+      }
     } else {
-      staffByTime.get(startTime).dayStaff.push(staffStatus)
+      // For regular staff, use existing logic
+      const isCurrentlyNightShift = staffStatus.currentShiftType === 'night'
+
+      if (isCurrentlyNightShift) {
+        staffByTime.get(startTime).nightStaff.push(staffStatus)
+      } else {
+        staffByTime.get(startTime).dayStaff.push(staffStatus)
+      }
     }
   })
 
@@ -158,7 +215,7 @@ const organizedStaff = computed(() => {
 
                 <!-- Contracted hours -->
                 <span class="contracted-hours">
-                  {{ getDisplayHours(staffStatus) }}
+                  {{ getDisplayHours(staffStatus, false) }}
                 </span>
               </div>
 
@@ -194,7 +251,7 @@ const organizedStaff = computed(() => {
 
                 <!-- Contracted hours -->
                 <span class="contracted-hours">
-                  {{ getDisplayHours(staffStatus) }}
+                  {{ getDisplayHours(staffStatus, true) }}
                 </span>
               </div>
 
