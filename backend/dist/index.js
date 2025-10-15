@@ -17,6 +17,11 @@ const staff_1 = __importDefault(require("./routes/staff"));
 const allocations_1 = __importDefault(require("./routes/allocations"));
 const overrides_1 = __importDefault(require("./routes/overrides"));
 const settings_1 = __importDefault(require("./routes/settings"));
+const runnerPools_1 = __importDefault(require("./routes/runnerPools"));
+const runnerAllocations_1 = __importDefault(require("./routes/runnerAllocations"));
+const minimum_staff_periods_1 = __importDefault(require("./routes/minimum-staff-periods"));
+const zero_start_dates_1 = __importDefault(require("./routes/zero-start-dates"));
+const bulk_edit_1 = __importDefault(require("./routes/bulk-edit"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
 // Initialize Prisma Client
@@ -26,7 +31,7 @@ app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
     origin: process.env.NODE_ENV === 'production'
         ? ['https://your-domain.com']
-        : ['http://localhost:5173'],
+        : ['http://localhost:5173', 'http://localhost:3000'],
     credentials: true
 }));
 app.use((0, morgan_1.default)('combined'));
@@ -44,6 +49,12 @@ app.use('/api/staff', staff_1.default);
 app.use('/api/allocations', allocations_1.default);
 app.use('/api/overrides', overrides_1.default);
 app.use('/api/settings', settings_1.default);
+app.use('/api/runner-pools', runnerPools_1.default);
+app.use('/api/runner-allocations', runnerAllocations_1.default);
+app.use('/api/minimum-staff-periods', minimum_staff_periods_1.default);
+app.use('/api/zero-start-dates', zero_start_dates_1.default);
+// Bulk edit interface (standalone page)
+app.use('/admin/bulk-staff-edit', bulk_edit_1.default);
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);

@@ -29,16 +29,16 @@ router.get('/', async (req, res) => {
         if (staffId) {
             whereClause.staffId = parseInt(staffId);
         }
-        const allocations = await index_1.prisma.staffAllocation.findMany({
+        const allocations = await index_1.prisma.staff_allocations.findMany({
             where: whereClause,
             include: {
                 staff: true,
-                department: {
+                departments: {
                     include: {
-                        building: true
+                        buildings: true
                     }
                 },
-                service: true
+                services: true
             },
             orderBy: [
                 { staff: { name: 'asc' } },
@@ -59,16 +59,16 @@ router.get('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid allocation ID' });
         }
-        const allocation = await index_1.prisma.staffAllocation.findUnique({
+        const allocation = await index_1.prisma.staff_allocations.findUnique({
             where: { id },
             include: {
                 staff: true,
-                department: {
+                departments: {
                     include: {
-                        building: true
+                        buildings: true
                     }
                 },
-                service: true
+                services: true
             }
         });
         if (!allocation) {
@@ -85,16 +85,16 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const validatedData = createAllocationSchema.parse(req.body);
-        const allocation = await index_1.prisma.staffAllocation.create({
+        const allocation = await index_1.prisma.staff_allocations.create({
             data: validatedData,
             include: {
                 staff: true,
-                department: {
+                departments: {
                     include: {
-                        building: true
+                        buildings: true
                     }
                 },
-                service: true
+                services: true
             }
         });
         res.status(201).json(allocation);
@@ -119,17 +119,17 @@ router.put('/:id', async (req, res) => {
         }
         const validatedData = updateAllocationSchema.parse(req.body);
         const updateData = validatedData;
-        const allocation = await index_1.prisma.staffAllocation.update({
+        const allocation = await index_1.prisma.staff_allocations.update({
             where: { id },
             data: updateData,
             include: {
                 staff: true,
-                department: {
+                departments: {
                     include: {
-                        building: true
+                        buildings: true
                     }
                 },
-                service: true
+                services: true
             }
         });
         res.json(allocation);
@@ -152,7 +152,7 @@ router.delete('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid allocation ID' });
         }
-        await index_1.prisma.staffAllocation.delete({
+        await index_1.prisma.staff_allocations.delete({
             where: { id }
         });
         res.status(204).send();

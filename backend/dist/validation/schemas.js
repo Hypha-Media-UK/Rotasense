@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.zeroStartDateIdSchema = exports.optionalNonNegativeIntSchema = exports.optionalPositiveIntSchema = exports.nonEmptyStringSchema = exports.positiveIntSchema = exports.scheduleTypeSchema = exports.overrideTypeSchema = exports.staffCategorySchema = exports.timeSchema = exports.daysOfWeekSchema = void 0;
+exports.zeroStartDateIdSchema = exports.optionalNonNegativeIntSchema = exports.optionalPositiveIntSchema = exports.nonEmptyStringSchema = exports.positiveIntSchema = exports.shiftPatternSchema = exports.scheduleTypeSchema = exports.overrideTypeSchema = exports.staffCategorySchema = exports.timeSchema = exports.daysOfWeekSchema = void 0;
 exports.validateShiftTimes = validateShiftTimes;
 const zod_1 = require("zod");
 // Common validation schemas used across multiple routes
@@ -47,6 +47,7 @@ function validateShiftTimes(startTime, endTime) {
 exports.staffCategorySchema = zod_1.z.enum(['REGULAR', 'RELIEF', 'SUPERVISOR']);
 exports.overrideTypeSchema = zod_1.z.enum(['TEMPORARY_ALLOCATION', 'ABSENCE']);
 exports.scheduleTypeSchema = zod_1.z.enum(['DAILY', 'SHIFT_CYCLE']);
+exports.shiftPatternSchema = zod_1.z.enum(['FIXED', 'ROTATING_DAY_NIGHT']);
 // Common field validations
 exports.positiveIntSchema = zod_1.z.number().int().positive();
 exports.nonEmptyStringSchema = zod_1.z.string().min(1);

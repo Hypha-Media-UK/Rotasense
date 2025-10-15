@@ -25,7 +25,10 @@ export const useHomeStore = defineStore('home', () => {
   const selectedWeek = computed(() => {
     const start = startOfWeek(selectedDate.value, { weekStartsOn: 1 }) // Monday
     const end = endOfWeek(selectedDate.value, { weekStartsOn: 1 })
-    return eachDayOfInterval({ start, end })
+    return eachDayOfInterval({ start, end }).map(date => {
+      // Ensure dates are normalized to avoid timezone issues
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    })
   })
 
   const selectedDateString = computed(() => format(selectedDate.value, 'yyyy-MM-dd'))
@@ -34,33 +37,38 @@ export const useHomeStore = defineStore('home', () => {
   const isSelectedDateToday = computed(() => isToday(selectedDate.value))
 
   // Get overrides for the selected date
-  const todaysOverrides = computed(() =>
-    dailyOverrides.value.filter(override =>
-      format(new Date(override.date), 'yyyy-MM-dd') === selectedDateString.value
-    )
-  )
+  // Note: The backend now handles date range filtering, so we can simplify this
+  const todaysOverrides = computed(() => dailyOverrides.value)
 
   // Helper function to get the default zero start date
   function getDefaultZeroStartDate(): Date {
     const configStore = useConfigStore()
     const zeroStartDates = configStore.settings?.zeroStartDates || []
     if (zeroStartDates.length > 0) {
-      return new Date(zeroStartDates[0].date)
+      // Parse as local date to avoid timezone issues
+      const dateString = zeroStartDates[0].date
+      const [year, month, day] = dateString.split('-').map(Number)
+      return new Date(year, month - 1, day)
     }
     // Fallback to a default date if no zero start dates are configured
-    return new Date('2024-01-01')
+    return new Date(2024, 0, 1) // January 1, 2024 in local timezone
   }
 
   // Calculate staff status for the selected date
   const staffStatuses = computed((): StaffStatus[] => {
     const configStore = useConfigStore()
-    const zeroDate = getDefaultZeroStartDate()
 
     return configStore.staff
       .filter(staff => {
         // Check if staff is scheduled to work on the selected date
         if (staff.scheduleType === 'SHIFT_CYCLE') {
-          return calculateEnhancedShiftStatus(staff, selectedDate.value, zeroDate)
+          // Get the specific zero start date for this staff member
+          const zeroStartDate = getZeroStartDate(staff.zeroStartDateId, configStore.settings)
+          if (!zeroStartDate) {
+            console.log(`No zero start date found for ${staff.name} (ID: ${staff.zeroStartDateId})`)
+            return false
+          }
+          return calculateEnhancedShiftStatus(staff, selectedDate.value, zeroStartDate)
         } else if (staff.scheduleType === 'DAILY') {
           return staff.contractedDays.includes(selectedDayOfWeek.value)
         }
@@ -129,7 +137,13 @@ export const useHomeStore = defineStore('home', () => {
 
 
       // Calculate shift type for rotating supervisors
-      const currentShiftType = getStaffShiftType(staff, selectedDate.value, zeroDate)
+      let currentShiftType = 'day' // default
+      if (staff.scheduleType === 'SHIFT_CYCLE') {
+        const zeroStartDate = getZeroStartDate(staff.zeroStartDateId, configStore.settings)
+        if (zeroStartDate) {
+          currentShiftType = getStaffShiftType(staff, selectedDate.value, zeroStartDate)
+        }
+      }
       const isRotatingSchedule = isRotatingSupervisor(staff)
 
       // Determine final status
@@ -156,7 +170,7 @@ export const useHomeStore = defineStore('home', () => {
   const departmentStatuses = computed((): DepartmentStatus[] => {
     const configStore = useConfigStore()
 
-    return configStore.departments
+    return (configStore.departments || [])
       .map(department => {
         // Check if department is operational today (24/7 or specific days)
         const isOperational = department.is24x7 || department.operationalDays.includes(selectedDayOfWeek.value)
@@ -196,7 +210,7 @@ export const useHomeStore = defineStore('home', () => {
   const serviceStatuses = computed((): ServiceStatus[] => {
     const configStore = useConfigStore()
 
-    return configStore.services
+    return (configStore.services || [])
       .map(service => {
         // Check if service is operational today (24/7 or specific days)
         const isOperational = service.is24x7 || service.operationalDays.includes(selectedDayOfWeek.value)
@@ -311,19 +325,31 @@ export const useHomeStore = defineStore('home', () => {
       return false
     }
 
-    const daysSinceZero = differenceInDays(date, new Date(zeroStartDate))
+    const daysSinceZero = differenceInDays(date, zeroStartDate)
     const cyclePosition = (daysSinceZero + (staff.shiftOffset || 0)) % (staff.daysOn + staff.daysOff)
     return cyclePosition < staff.daysOn
   }
 
   // Helper function to get zero start date from settings
-  function getZeroStartDate(zeroStartDateId: string, settings: any): string | null {
+  function getZeroStartDate(zeroStartDateId: string, settings: any): Date | null {
     if (!settings?.zeroStartDates) {
       return null
     }
 
     const zeroStartDateEntry = settings.zeroStartDates.find((zsd: any) => zsd.id === zeroStartDateId)
-    return zeroStartDateEntry?.date || null
+    if (!zeroStartDateEntry?.date) {
+      return null
+    }
+
+    // Parse the date string as a local date to avoid timezone issues
+    const dateString = zeroStartDateEntry.date
+    const [year, month, day] = dateString.split('-').map(Number)
+    const result = new Date(year, month - 1, day) // month is 0-indexed
+
+    // Debug can be enabled if needed
+    // console.log(`getZeroStartDate: input="${dateString}" -> local date created`)
+
+    return result
   }
 
   // Helper function to check if staff is within working hours
@@ -357,8 +383,12 @@ export const useHomeStore = defineStore('home', () => {
       return staff.contractedDays.includes(currentDayOfWeek) && currentTime < startTime
     } else if (staff.scheduleType === 'SHIFT_CYCLE') {
       // Check if they're on shift today and start time hasn't passed
-      const zeroDate = getDefaultZeroStartDate()
-      return calculateEnhancedShiftStatus(staff, currentDateTime, zeroDate) && currentTime < startTime
+      const configStore = useConfigStore()
+      const zeroStartDate = getZeroStartDate(staff.zeroStartDateId, configStore.settings)
+      if (!zeroStartDate) {
+        return false
+      }
+      return calculateEnhancedShiftStatus(staff, currentDateTime, zeroStartDate) && currentTime < startTime
     }
 
     return false

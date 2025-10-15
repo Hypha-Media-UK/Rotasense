@@ -41,7 +41,18 @@ router.get('/', async (req, res) => {
     
     const whereClause: any = {};
     if (date) {
-      whereClause.date = new Date(date as string);
+      const requestedDate = new Date(date as string);
+      // Find overrides that are active on the requested date
+      // This includes overrides where the date falls between start date and end date (inclusive)
+      whereClause.AND = [
+        { date: { lte: requestedDate } }, // Start date <= requested date
+        {
+          OR: [
+            { endDate: null }, // Single-day overrides (no end date)
+            { endDate: { gte: requestedDate } } // End date >= requested date
+          ]
+        }
+      ];
     }
     if (staffId) {
       whereClause.staffId = parseInt(staffId as string);

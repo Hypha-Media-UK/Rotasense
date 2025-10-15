@@ -12,14 +12,17 @@ const router = express_1.default.Router();
 const createStaffSchema = zod_1.z.object({
     name: schemas_1.nonEmptyStringSchema.describe('Staff name is required'),
     category: schemas_1.staffCategorySchema.optional(),
+    isNightStaff: zod_1.z.boolean().optional(),
     scheduleType: schemas_1.scheduleTypeSchema.optional(),
     daysOn: schemas_1.optionalPositiveIntSchema,
     daysOff: schemas_1.optionalPositiveIntSchema,
     shiftOffset: schemas_1.optionalNonNegativeIntSchema,
     zeroStartDateId: schemas_1.zeroStartDateIdSchema.optional(),
+    shiftPattern: schemas_1.shiftPatternSchema.optional(),
     defaultStartTime: schemas_1.timeSchema.optional(),
     defaultEndTime: schemas_1.timeSchema.optional(),
-    contractedDays: schemas_1.daysOfWeekSchema
+    contractedDays: schemas_1.daysOfWeekSchema,
+    runnerPoolId: schemas_1.optionalPositiveIntSchema
 }).refine((data) => {
     // If scheduleType is SHIFT_CYCLE, require shift cycle fields
     if (data.scheduleType === 'SHIFT_CYCLE') {
@@ -37,6 +40,21 @@ const createStaffSchema = zod_1.z.object({
     return true;
 }, {
     message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
+}).refine((data) => {
+    // Validate rotating day/night pattern requirements
+    if (data.shiftPattern === 'ROTATING_DAY_NIGHT') {
+        // Only supervisors can have rotating shifts
+        if (data.category !== 'SUPERVISOR') {
+            return false;
+        }
+        // Rotating shifts require SHIFT_CYCLE schedule type
+        if (data.scheduleType !== 'SHIFT_CYCLE') {
+            return false;
+        }
+    }
+    return true;
+}, {
+    message: "Rotating day/night shifts are only available for supervisors with SHIFT_CYCLE schedule type"
 });
 const updateStaffSchema = zod_1.z.object({
     name: schemas_1.nonEmptyStringSchema.optional(),
@@ -46,9 +64,12 @@ const updateStaffSchema = zod_1.z.object({
     daysOff: schemas_1.optionalPositiveIntSchema,
     shiftOffset: schemas_1.optionalNonNegativeIntSchema,
     zeroStartDateId: schemas_1.zeroStartDateIdSchema.optional(),
+    shiftPattern: schemas_1.shiftPatternSchema.optional(),
     defaultStartTime: schemas_1.timeSchema.optional(),
     defaultEndTime: schemas_1.timeSchema.optional(),
-    contractedDays: schemas_1.daysOfWeekSchema.optional()
+    contractedDays: schemas_1.daysOfWeekSchema.optional(),
+    isNightStaff: zod_1.z.boolean().optional(),
+    runnerPoolId: zod_1.z.union([zod_1.z.number().int().positive(), zod_1.z.null()]).optional()
 }).refine((data) => {
     // If scheduleType is SHIFT_CYCLE, require shift cycle fields
     if (data.scheduleType === 'SHIFT_CYCLE') {
@@ -66,6 +87,21 @@ const updateStaffSchema = zod_1.z.object({
     return true;
 }, {
     message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
+}).refine((data) => {
+    // Validate rotating day/night pattern requirements
+    if (data.shiftPattern === 'ROTATING_DAY_NIGHT') {
+        // Only supervisors can have rotating shifts
+        if (data.category !== 'SUPERVISOR') {
+            return false;
+        }
+        // Rotating shifts require SHIFT_CYCLE schedule type
+        if (data.scheduleType !== 'SHIFT_CYCLE') {
+            return false;
+        }
+    }
+    return true;
+}, {
+    message: "Rotating day/night shifts are only available for supervisors with SHIFT_CYCLE schedule type"
 });
 // GET /api/staff - Get all staff members
 router.get('/', async (req, res) => {
@@ -78,14 +114,26 @@ router.get('/', async (req, res) => {
         const staff = await index_1.prisma.staff.findMany({
             where: whereClause,
             include: {
-                allocations: {
+                staff_allocations: {
                     include: {
-                        department: {
+                        departments: {
                             include: {
-                                building: true
+                                buildings: true
                             }
                         },
-                        service: true
+                        services: true
+                    }
+                },
+                runner_pools: true,
+                runner_allocations: {
+                    include: {
+                        departments: {
+                            include: {
+                                buildings: true
+                            }
+                        },
+                        services: true,
+                        runner_pools: true
                     }
                 }
             },
@@ -113,14 +161,14 @@ router.get('/:id', async (req, res) => {
         const staff = await index_1.prisma.staff.findUnique({
             where: { id },
             include: {
-                allocations: {
+                staff_allocations: {
                     include: {
-                        department: {
+                        departments: {
                             include: {
-                                building: true
+                                buildings: true
                             }
                         },
-                        service: true
+                        services: true
                     }
                 }
             }
@@ -149,14 +197,14 @@ router.post('/', async (req, res) => {
                 contractedDays: JSON.stringify(validatedData.contractedDays)
             },
             include: {
-                allocations: {
+                staff_allocations: {
                     include: {
-                        department: {
+                        departments: {
                             include: {
-                                building: true
+                                buildings: true
                             }
                         },
-                        service: true
+                        services: true
                     }
                 }
             }
@@ -194,14 +242,14 @@ router.put('/:id', async (req, res) => {
             where: { id },
             data: updateData,
             include: {
-                allocations: {
+                staff_allocations: {
                     include: {
-                        department: {
+                        departments: {
                             include: {
-                                building: true
+                                buildings: true
                             }
                         },
-                        service: true
+                        services: true
                     }
                 }
             }

@@ -11,13 +11,16 @@ const router = express_1.default.Router();
 // Validation schemas
 const createOverrideSchema = zod_1.z.object({
     date: zod_1.z.string().datetime('Invalid date format'),
+    endDate: zod_1.z.string().datetime('Invalid end date format').optional(),
     staffId: schemas_1.positiveIntSchema.describe('Staff ID is required'),
     departmentId: schemas_1.positiveIntSchema.optional(),
     serviceId: schemas_1.positiveIntSchema.optional(),
+    runnerPoolId: schemas_1.positiveIntSchema.optional(),
     overrideType: schemas_1.overrideTypeSchema,
     startTime: schemas_1.timeSchema.optional(),
     endTime: schemas_1.timeSchema.optional(),
-    reason: zod_1.z.string().optional()
+    reason: zod_1.z.string().optional(),
+    autoExpire: zod_1.z.boolean().optional()
 }).refine((data) => {
     if (data.overrideType === 'TEMPORARY_ALLOCATION') {
         // For temporary allocation, exactly one of departmentId or serviceId must be provided
@@ -35,21 +38,32 @@ router.get('/', async (req, res) => {
         const { date, staffId } = req.query;
         const whereClause = {};
         if (date) {
-            whereClause.date = new Date(date);
+            const requestedDate = new Date(date);
+            // Find overrides that are active on the requested date
+            // This includes overrides where the date falls between start date and end date (inclusive)
+            whereClause.AND = [
+                { date: { lte: requestedDate } }, // Start date <= requested date
+                {
+                    OR: [
+                        { endDate: null }, // Single-day overrides (no end date)
+                        { endDate: { gte: requestedDate } } // End date >= requested date
+                    ]
+                }
+            ];
         }
         if (staffId) {
             whereClause.staffId = parseInt(staffId);
         }
-        const overrides = await index_1.prisma.dailyOverride.findMany({
+        const overrides = await index_1.prisma.daily_overrides.findMany({
             where: whereClause,
             include: {
                 staff: true,
-                department: {
+                departments: {
                     include: {
-                        building: true
+                        buildings: true
                     }
                 },
-                service: true
+                services: true
             },
             orderBy: [
                 { date: 'desc' },
@@ -70,16 +84,16 @@ router.get('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid override ID' });
         }
-        const override = await index_1.prisma.dailyOverride.findUnique({
+        const override = await index_1.prisma.daily_overrides.findUnique({
             where: { id },
             include: {
                 staff: true,
-                department: {
+                departments: {
                     include: {
-                        building: true
+                        buildings: true
                     }
                 },
-                service: true
+                services: true
             }
         });
         if (!override) {
@@ -96,19 +110,20 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const validatedData = createOverrideSchema.parse(req.body);
-        const override = await index_1.prisma.dailyOverride.create({
+        const override = await index_1.prisma.daily_overrides.create({
             data: {
                 ...validatedData,
-                date: new Date(validatedData.date)
+                date: new Date(validatedData.date),
+                endDate: validatedData.endDate ? new Date(validatedData.endDate) : null
             },
             include: {
                 staff: true,
-                department: {
+                departments: {
                     include: {
-                        building: true
+                        buildings: true
                     }
                 },
-                service: true
+                services: true
             }
         });
         res.status(201).json(override);
@@ -136,17 +151,20 @@ router.put('/:id', async (req, res) => {
         if (validatedData.date) {
             updateData.date = new Date(validatedData.date);
         }
-        const override = await index_1.prisma.dailyOverride.update({
+        if (validatedData.endDate) {
+            updateData.endDate = new Date(validatedData.endDate);
+        }
+        const override = await index_1.prisma.daily_overrides.update({
             where: { id },
             data: updateData,
             include: {
                 staff: true,
-                department: {
+                departments: {
                     include: {
-                        building: true
+                        buildings: true
                     }
                 },
-                service: true
+                services: true
             }
         });
         res.json(override);
@@ -169,7 +187,7 @@ router.delete('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid override ID' });
         }
-        await index_1.prisma.dailyOverride.delete({
+        await index_1.prisma.daily_overrides.delete({
             where: { id }
         });
         res.status(204).send();

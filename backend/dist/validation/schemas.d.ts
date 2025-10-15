@@ -26,6 +26,10 @@ export declare const scheduleTypeSchema: z.ZodEnum<{
     DAILY: "DAILY";
     SHIFT_CYCLE: "SHIFT_CYCLE";
 }>;
+export declare const shiftPatternSchema: z.ZodEnum<{
+    FIXED: "FIXED";
+    ROTATING_DAY_NIGHT: "ROTATING_DAY_NIGHT";
+}>;
 export declare const positiveIntSchema: z.ZodNumber;
 export declare const nonEmptyStringSchema: z.ZodString;
 export declare const optionalPositiveIntSchema: z.ZodOptional<z.ZodNumber>;

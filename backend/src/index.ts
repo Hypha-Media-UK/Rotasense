@@ -16,6 +16,8 @@ import settingsRoutes from './routes/settings';
 import runnerPoolRoutes from './routes/runnerPools';
 import runnerAllocationRoutes from './routes/runnerAllocations';
 import minimumStaffPeriodRoutes from './routes/minimum-staff-periods';
+import zeroStartDateRoutes from './routes/zero-start-dates';
+import bulkEditRoutes from './routes/bulk-edit';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -26,9 +28,9 @@ export const prisma = new PrismaClient();
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-domain.com'] 
-    : ['http://localhost:5173'],
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://your-domain.com']
+    : ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true
 }));
 app.use(morgan('combined'));
@@ -52,6 +54,10 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/runner-pools', runnerPoolRoutes);
 app.use('/api/runner-allocations', runnerAllocationRoutes);
 app.use('/api/minimum-staff-periods', minimumStaffPeriodRoutes);
+app.use('/api/zero-start-dates', zeroStartDateRoutes);
+
+// Bulk edit interface (standalone page)
+app.use('/admin/bulk-staff-edit', bulkEditRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -8,13 +8,13 @@ export interface SupervisorShiftInfo {
 
 /**
  * Calculate shift information for rotating day/night supervisors
- * 
+ *
  * Pattern: 4 days on (day shift) → 4 days off → 4 nights on (night shift) → 4 days off → repeat
  * This creates a 16-day mega-cycle
  */
 export function calculateSupervisorShiftInfo(
-  staff: Staff, 
-  targetDate: Date, 
+  staff: Staff,
+  targetDate: Date,
   zeroDate: Date
 ): SupervisorShiftInfo {
   if (staff.shiftPattern !== 'ROTATING_DAY_NIGHT') {
@@ -24,23 +24,23 @@ export function calculateSupervisorShiftInfo(
   const daysOn = staff.daysOn || 4;
   const daysOff = staff.daysOff || 4;
   const shiftOffset = staff.shiftOffset || 0;
-  
+
   // Calculate days since zero date
   const daysSinceZero = Math.floor(
     (targetDate.getTime() - zeroDate.getTime()) / (1000 * 60 * 60 * 24)
   );
-  
+
   // Apply shift offset
   const adjustedDays = daysSinceZero + shiftOffset;
-  
+
   // 16-day mega-cycle (4 on day + 4 off + 4 on night + 4 off)
   const megaCycleLength = (daysOn + daysOff) * 2; // 16 days
   const cycleDay = ((adjustedDays % megaCycleLength) + megaCycleLength) % megaCycleLength + 1;
-  
+
   // Determine shift status and type
   let isOnDuty: boolean;
   let shiftType: 'day' | 'night';
-  
+
   if (cycleDay <= daysOn) {
     // Days 1-4: Day shift (on duty)
     isOnDuty = true;
@@ -58,7 +58,7 @@ export function calculateSupervisorShiftInfo(
     isOnDuty = false;
     shiftType = 'night'; // Default to night when off duty
   }
-  
+
   return {
     isOnDuty,
     shiftType,
@@ -70,14 +70,14 @@ export function calculateSupervisorShiftInfo(
  * Enhanced version of shift status calculation that handles both fixed and rotating patterns
  */
 export function calculateEnhancedShiftStatus(
-  staff: Staff, 
-  targetDate: Date, 
+  staff: Staff,
+  targetDate: Date,
   zeroDate: Date
 ): boolean {
   if (staff.scheduleType !== 'SHIFT_CYCLE') {
     return false; // Daily schedule staff handled elsewhere
   }
-  
+
   if (staff.shiftPattern === 'ROTATING_DAY_NIGHT') {
     const shiftInfo = calculateSupervisorShiftInfo(staff, targetDate, zeroDate);
     return shiftInfo.isOnDuty;
@@ -99,24 +99,35 @@ export function calculateShiftStatus(staff: Staff, targetDate: Date, zeroDate: D
   const daysOn = staff.daysOn || 4;
   const daysOff = staff.daysOff || 4;
   const shiftOffset = staff.shiftOffset || 0;
-  
+
+  // Normalize dates to avoid timezone issues - use date-only comparison
+  const targetDateNormalized = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const zeroDateNormalized = new Date(zeroDate.getFullYear(), zeroDate.getMonth(), zeroDate.getDate());
+
   const daysSinceZero = Math.floor(
-    (targetDate.getTime() - zeroDate.getTime()) / (1000 * 60 * 60 * 24)
+    (targetDateNormalized.getTime() - zeroDateNormalized.getTime()) / (1000 * 60 * 60 * 24)
   );
-  
+
   const adjustedDays = daysSinceZero + shiftOffset;
   const cycleLength = daysOn + daysOff;
   const cycleDay = ((adjustedDays % cycleLength) + cycleLength) % cycleLength;
-  
-  return cycleDay < daysOn;
+
+  const result = cycleDay < daysOn;
+
+  // Debug can be enabled if needed
+  // if (['AJ', 'Carla Barton'].includes(staff.name)) {
+  //   console.log(`CALC ${staff.name}: daysSince=${daysSinceZero}, offset=${shiftOffset}, cycleDay=${cycleDay}, result=${result}`);
+  // }
+
+  return result;
 }
 
 /**
  * Get the current shift type for any staff member
  */
 export function getStaffShiftType(
-  staff: Staff, 
-  targetDate: Date, 
+  staff: Staff,
+  targetDate: Date,
   zeroDate: Date
 ): 'day' | 'night' {
   if (staff.shiftPattern === 'ROTATING_DAY_NIGHT') {

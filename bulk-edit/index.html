@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Staff Administration - RotaSense</title>
+    <link rel="stylesheet" href="/admin/bulk-staff-edit/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1>Bulk Staff Administration</h1>
+            <p class="subtitle">Quickly edit staff working hours and shift cycle settings</p>
+        </header>
+
+        <div class="controls">
+            <div class="search-filter">
+                <input type="text" id="searchInput" placeholder="Search staff by name..." class="search-input">
+                <select id="scheduleFilter" class="filter-select">
+                    <option value="">All Schedule Types</option>
+                    <option value="DAILY">Daily Schedule</option>
+                    <option value="SHIFT_CYCLE">Shift Cycle</option>
+                </select>
+            </div>
+            <div class="action-buttons">
+                <button id="saveAllBtn" class="btn btn-primary" disabled>Save All Changes</button>
+                <button id="refreshBtn" class="btn btn-secondary">Refresh Data</button>
+                <button id="checkZeroStartBtn" class="btn btn-secondary">📅 Check Zero Start Dates</button>
+                <div class="auto-refresh-indicator" id="autoRefreshIndicator" title="Auto-refreshing zero start dates every 30 seconds">
+                    🔄 Auto-refresh: ON
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <span>Loading staff data...</span>
+        </div>
+
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <span class="error-text"></span>
+            <button class="error-close">&times;</button>
+        </div>
+
+        <div class="success-message" id="successMessage" style="display: none;">
+            <span class="success-text"></span>
+            <button class="success-close">&times;</button>
+        </div>
+
+        <div class="table-container">
+            <table class="staff-table" id="staffTable">
+                <thead>
+                    <tr>
+                        <th>Staff Name</th>
+                        <th>Schedule Type</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Group Offset</th>
+                        <th>Zero Start Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="staffTableBody">
+                    <!-- Staff rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <h3>No staff members found</h3>
+            <p>No staff members match your current search criteria.</p>
+        </div>
+
+        <div class="stats">
+            <span id="staffCount">0 staff members</span>
+            <span id="changedCount">0 pending changes</span>
+        </div>
+    </div>
+
+    <script src="/admin/bulk-staff-edit/script.js"></script>
+</body>
+</html>

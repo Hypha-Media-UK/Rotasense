@@ -15,7 +15,7 @@ const createServiceSchema = zod_1.z.object({
     operationalDays: schemas_1.daysOfWeekSchema,
     startTime: schemas_1.timeSchema,
     endTime: schemas_1.timeSchema,
-    minStaff: zod_1.z.number().int().min(1, 'Minimum staff must be at least 1'),
+    minStaff: zod_1.z.number().int().min(0, 'Minimum staff cannot be negative'),
     displayOnHome: zod_1.z.boolean().optional()
 }).refine((data) => {
     // Validate operational times
@@ -30,7 +30,7 @@ const updateServiceSchema = zod_1.z.object({
     operationalDays: schemas_1.daysOfWeekSchema.optional(),
     startTime: schemas_1.timeSchema.optional(),
     endTime: schemas_1.timeSchema.optional(),
-    minStaff: zod_1.z.number().int().min(1, 'Minimum staff must be at least 1').optional(),
+    minStaff: zod_1.z.number().int().min(0, 'Minimum staff cannot be negative').optional(),
     displayOnHome: zod_1.z.boolean().optional()
 }).refine((data) => {
     // Validate operational times if both are provided
@@ -45,20 +45,27 @@ const updateServiceSchema = zod_1.z.object({
 // GET /api/services - Get all services
 router.get('/', async (req, res) => {
     try {
-        const services = await index_1.prisma.service.findMany({
+        const services = await index_1.prisma.services.findMany({
             include: {
-                staffAllocations: {
+                staff_allocations: {
                     include: {
                         staff: true
                     }
+                },
+                minimum_staff_periods: {
+                    orderBy: { startTime: 'asc' }
                 }
             },
             orderBy: { name: 'asc' }
         });
         // Parse JSON strings back to arrays
-        const servicesWithParsedData = services.map(service => ({
+        const servicesWithParsedData = services.map((service) => ({
             ...service,
-            operationalDays: JSON.parse(service.operationalDays)
+            operationalDays: JSON.parse(service.operationalDays),
+            minimum_staff_periods: service.minimum_staff_periods.map((period) => ({
+                ...period,
+                daysOfWeek: JSON.parse(period.daysOfWeek)
+            }))
         }));
         res.json(servicesWithParsedData);
     }
@@ -74,13 +81,16 @@ router.get('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid service ID' });
         }
-        const service = await index_1.prisma.service.findUnique({
+        const service = await index_1.prisma.services.findUnique({
             where: { id },
             include: {
-                staffAllocations: {
+                staff_allocations: {
                     include: {
                         staff: true
                     }
+                },
+                minimum_staff_periods: {
+                    orderBy: { startTime: 'asc' }
                 }
             }
         });
@@ -89,7 +99,11 @@ router.get('/:id', async (req, res) => {
         }
         const serviceWithParsedData = {
             ...service,
-            operationalDays: JSON.parse(service.operationalDays)
+            operationalDays: JSON.parse(service.operationalDays),
+            minimum_staff_periods: service.minimum_staff_periods.map((period) => ({
+                ...period,
+                daysOfWeek: JSON.parse(period.daysOfWeek)
+            }))
         };
         res.json(serviceWithParsedData);
     }
@@ -102,13 +116,13 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const validatedData = createServiceSchema.parse(req.body);
-        const service = await index_1.prisma.service.create({
+        const service = await index_1.prisma.services.create({
             data: {
                 ...validatedData,
                 operationalDays: JSON.stringify(validatedData.operationalDays)
             },
             include: {
-                staffAllocations: {
+                staff_allocations: {
                     include: {
                         staff: true
                     }
@@ -144,11 +158,11 @@ router.put('/:id', async (req, res) => {
         if (validatedData.operationalDays) {
             updateData.operationalDays = JSON.stringify(validatedData.operationalDays);
         }
-        const service = await index_1.prisma.service.update({
+        const service = await index_1.prisma.services.update({
             where: { id },
             data: updateData,
             include: {
-                staffAllocations: {
+                staff_allocations: {
                     include: {
                         staff: true
                     }
@@ -179,7 +193,7 @@ router.delete('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid service ID' });
         }
-        await index_1.prisma.service.delete({
+        await index_1.prisma.services.delete({
             where: { id }
         });
         res.status(204).send();

@@ -76,6 +76,14 @@ function saveZeroStartDate() {
     return
   }
 
+  // Ensure the date is stored in YYYY-MM-DD format consistently
+  // The HTML date input already provides this format, but we validate it
+  const dateString = newZeroStartDate.value.date
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    console.error('Invalid date format:', dateString)
+    return
+  }
+
   if (editingZeroStartDate.value) {
     // Edit existing
     const index = zeroStartDates.value.findIndex(zsd => zsd.id === editingZeroStartDate.value!.id)
@@ -83,7 +91,7 @@ function saveZeroStartDate() {
       zeroStartDates.value[index] = {
         ...editingZeroStartDate.value,
         name: newZeroStartDate.value.name.trim(),
-        date: newZeroStartDate.value.date
+        date: dateString
       }
     }
   } else {
@@ -92,7 +100,7 @@ function saveZeroStartDate() {
     zeroStartDates.value.push({
       id: newId,
       name: newZeroStartDate.value.name.trim(),
-      date: newZeroStartDate.value.date
+      date: dateString
     })
   }
 

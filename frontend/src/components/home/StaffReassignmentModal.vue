@@ -145,10 +145,11 @@ function populateFormFromOverride() {
     selectedLocationId.value = override.serviceId
   }
 
-  // Set dates
-  startDate.value = format(new Date(override.date), 'yyyy-MM-dd')
+  // Set dates - handle timezone consistently
+  // Extract date part from ISO string to avoid timezone conversion
+  startDate.value = override.date.split('T')[0]
   if (override.endDate) {
-    endDate.value = format(new Date(override.endDate), 'yyyy-MM-dd')
+    endDate.value = override.endDate.split('T')[0]
   } else {
     endDate.value = ''
   }
@@ -178,6 +179,8 @@ async function removeTemporaryAllocation() {
 }
 
 async function saveTemporaryAssignment() {
+
+
   if (!props.staff || !isFormValid.value) {
     error.value = 'Please fill in all required fields'
     return
@@ -188,11 +191,28 @@ async function saveTemporaryAssignment() {
 
   try {
     // Convert date strings to datetime format for backend
-    const startDateTime = new Date(startDate.value + 'T00:00:00.000Z').toISOString()
+    // Create ISO strings that represent the local date/time without timezone conversion
+    function createLocalISOString(dateStr: string, hours: number, minutes: number, seconds: number, ms: number): string {
+      const [year, month, day] = dateStr.split('-').map(Number)
+      const date = new Date(year, month - 1, day, hours, minutes, seconds, ms)
+
+      // Get timezone offset and adjust to create a "local" ISO string
+      const timezoneOffset = date.getTimezoneOffset() * 60000 // offset in milliseconds
+      const localDate = new Date(date.getTime() - timezoneOffset)
+      return localDate.toISOString()
+    }
+
+    const startDateTime = createLocalISOString(startDate.value, 0, 0, 0, 0)
+
     // If no end date specified, default to same day (today only)
-    const endDateTime = endDate.value ?
-      new Date(endDate.value + 'T23:59:59.999Z').toISOString() :
-      new Date(startDate.value + 'T23:59:59.999Z').toISOString()
+    let endDateTime: string
+    if (endDate.value) {
+      endDateTime = createLocalISOString(endDate.value, 23, 59, 59, 999)
+    } else {
+      endDateTime = createLocalISOString(startDate.value, 23, 59, 59, 999)
+    }
+
+
 
     const overrideData: CreateOverrideForm = {
       staffId: props.staff.id,
@@ -217,7 +237,6 @@ async function saveTemporaryAssignment() {
       // Create new assignment
       await homeStore.createOverride(overrideData)
     }
-
     closeModal()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to save temporary assignment'

@@ -18,7 +18,7 @@ const updateBuildingSchema = zod_1.z.object({
 // GET /api/buildings - Get all buildings with their departments
 router.get('/', async (req, res) => {
     try {
-        const buildings = await index_1.prisma.building.findMany({
+        const buildings = await index_1.prisma.buildings.findMany({
             include: {
                 departments: {
                     orderBy: { name: 'asc' }
@@ -40,7 +40,7 @@ router.get('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid building ID' });
         }
-        const building = await index_1.prisma.building.findUnique({
+        const building = await index_1.prisma.buildings.findUnique({
             where: { id },
             include: {
                 departments: {
@@ -62,7 +62,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const validatedData = createBuildingSchema.parse(req.body);
-        const building = await index_1.prisma.building.create({
+        const building = await index_1.prisma.buildings.create({
             data: validatedData,
             include: {
                 departments: true
@@ -89,7 +89,7 @@ router.put('/:id', async (req, res) => {
             return res.status(400).json({ error: 'Invalid building ID' });
         }
         const validatedData = updateBuildingSchema.parse(req.body);
-        const building = await index_1.prisma.building.update({
+        const building = await index_1.prisma.buildings.update({
             where: { id },
             data: validatedData,
             include: {
@@ -116,7 +116,7 @@ router.delete('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid building ID' });
         }
-        await index_1.prisma.building.delete({
+        await index_1.prisma.buildings.delete({
             where: { id }
         });
         res.status(204).send();

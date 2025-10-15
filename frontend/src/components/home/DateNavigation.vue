@@ -12,7 +12,7 @@ const monthYearLabel = computed(() => {
 })
 
 const dayLabels = computed(() => {
-  return homeStore.selectedWeek.map(date => ({
+  const labels = homeStore.selectedWeek.map(date => ({
     date,
     dayNumber: format(date, 'd'),
     fullDate: format(date, 'EEEE, MMMM d, yyyy'),
@@ -20,6 +20,11 @@ const dayLabels = computed(() => {
     isToday: format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'),
     isWeekend: date.getDay() === 0 || date.getDay() === 6 // Sunday or Saturday
   }))
+
+  // Debug can be enabled if needed
+  // console.log('Week dates:', labels.map(l => `${l.dayNumber}: ${format(l.date, 'yyyy-MM-dd')} (${format(l.date, 'EEEE')})`))
+
+  return labels
 })
 
 // Keyboard navigation

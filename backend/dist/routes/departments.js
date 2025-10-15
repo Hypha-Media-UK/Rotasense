@@ -16,7 +16,7 @@ const createDepartmentSchema = zod_1.z.object({
     operationalDays: schemas_1.daysOfWeekSchema,
     startTime: schemas_1.timeSchema,
     endTime: schemas_1.timeSchema,
-    minStaff: zod_1.z.number().int().min(1, 'Minimum staff must be at least 1'),
+    minStaff: zod_1.z.number().int().min(0, 'Minimum staff cannot be negative'),
     displayOnHome: zod_1.z.boolean().optional()
 }).refine((data) => {
     // Validate operational times
@@ -32,7 +32,7 @@ const updateDepartmentSchema = zod_1.z.object({
     operationalDays: schemas_1.daysOfWeekSchema.optional(),
     startTime: schemas_1.timeSchema.optional(),
     endTime: schemas_1.timeSchema.optional(),
-    minStaff: zod_1.z.number().int().min(1, 'Minimum staff must be at least 1').optional(),
+    minStaff: zod_1.z.number().int().min(0, 'Minimum staff cannot be negative').optional(),
     displayOnHome: zod_1.z.boolean().optional()
 }).refine((data) => {
     // Validate operational times if both are provided
@@ -47,21 +47,28 @@ const updateDepartmentSchema = zod_1.z.object({
 // GET /api/departments - Get all departments
 router.get('/', async (req, res) => {
     try {
-        const departments = await index_1.prisma.department.findMany({
+        const departments = await index_1.prisma.departments.findMany({
             include: {
-                building: true,
-                staffAllocations: {
+                buildings: true,
+                staff_allocations: {
                     include: {
                         staff: true
                     }
+                },
+                minimum_staff_periods: {
+                    orderBy: { startTime: 'asc' }
                 }
             },
             orderBy: { name: 'asc' }
         });
         // Parse JSON strings back to arrays
-        const departmentsWithParsedData = departments.map(dept => ({
+        const departmentsWithParsedData = departments.map((dept) => ({
             ...dept,
-            operationalDays: JSON.parse(dept.operationalDays)
+            operationalDays: JSON.parse(dept.operationalDays),
+            minimum_staff_periods: dept.minimum_staff_periods.map((period) => ({
+                ...period,
+                daysOfWeek: JSON.parse(period.daysOfWeek)
+            }))
         }));
         res.json(departmentsWithParsedData);
     }
@@ -77,14 +84,17 @@ router.get('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid department ID' });
         }
-        const department = await index_1.prisma.department.findUnique({
+        const department = await index_1.prisma.departments.findUnique({
             where: { id },
             include: {
-                building: true,
-                staffAllocations: {
+                buildings: true,
+                staff_allocations: {
                     include: {
                         staff: true
                     }
+                },
+                minimum_staff_periods: {
+                    orderBy: { startTime: 'asc' }
                 }
             }
         });
@@ -93,7 +103,11 @@ router.get('/:id', async (req, res) => {
         }
         const departmentWithParsedData = {
             ...department,
-            operationalDays: JSON.parse(department.operationalDays)
+            operationalDays: JSON.parse(department.operationalDays),
+            minimum_staff_periods: department.minimum_staff_periods.map((period) => ({
+                ...period,
+                daysOfWeek: JSON.parse(period.daysOfWeek)
+            }))
         };
         res.json(departmentWithParsedData);
     }
@@ -106,14 +120,14 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const validatedData = createDepartmentSchema.parse(req.body);
-        const department = await index_1.prisma.department.create({
+        const department = await index_1.prisma.departments.create({
             data: {
                 ...validatedData,
                 operationalDays: JSON.stringify(validatedData.operationalDays)
             },
             include: {
-                building: true,
-                staffAllocations: {
+                buildings: true,
+                staff_allocations: {
                     include: {
                         staff: true
                     }
@@ -149,12 +163,12 @@ router.put('/:id', async (req, res) => {
         if (validatedData.operationalDays) {
             updateData.operationalDays = JSON.stringify(validatedData.operationalDays);
         }
-        const department = await index_1.prisma.department.update({
+        const department = await index_1.prisma.departments.update({
             where: { id },
             data: updateData,
             include: {
-                building: true,
-                staffAllocations: {
+                buildings: true,
+                staff_allocations: {
                     include: {
                         staff: true
                     }
@@ -185,7 +199,7 @@ router.delete('/:id', async (req, res) => {
         if (isNaN(id)) {
             return res.status(400).json({ error: 'Invalid department ID' });
         }
-        await index_1.prisma.department.delete({
+        await index_1.prisma.departments.delete({
             where: { id }
         });
         res.status(204).send();
