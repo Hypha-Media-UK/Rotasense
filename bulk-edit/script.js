@@ -156,12 +156,10 @@ function createStaffRow(staff) {
                        ${hasChanges && pendingChanges.get(staff.id).defaultEndTime !== undefined ? 'class="table-input changed"' : ''}>
             </td>
             <td>
-                <input type="number" 
-                       class="table-input" 
-                       data-field="shiftOffset" 
+                <input type="number"
+                       class="table-input"
+                       data-field="shiftOffset"
                        value="${staff.shiftOffset || 0}"
-                       min="0" 
-                       max="30"
                        ${!isShiftCycle ? 'disabled' : ''}
                        ${hasChanges && pendingChanges.get(staff.id).shiftOffset !== undefined ? 'class="table-input changed"' : ''}>
             </td>
@@ -251,7 +249,7 @@ function updateRowFieldsForScheduleType(row, staffId, newScheduleType) {
         zeroStartDateSelect.disabled = false;
         zeroStartDateSelect.title = 'Select zero start date for shift calculations';
         shiftOffsetInput.disabled = false;
-        shiftOffsetInput.title = 'Group offset for shift cycle';
+        shiftOffsetInput.title = 'Group offset for shift cycle. Positive values (0, 4, 8...) = Groups A, B, C... Negative values (-4, -8...) = Earlier groups';
 
         // Update placeholder text
         const firstOption = zeroStartDateSelect.querySelector('option[value=""]');

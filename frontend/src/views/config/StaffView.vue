@@ -92,7 +92,22 @@ function getStaffScheduleDisplay(staff: Staff): string {
       return `${staff.daysOn}/${staff.daysOff} Rotating Day/Night Shifts`
     } else {
       const shiftType = staff.isNightStaff ? 'Night' : 'Day'
-      return `${staff.daysOn}/${staff.daysOff} ${shiftType} Shift Cycle (Group ${String.fromCharCode(65 + (staff.shiftOffset || 0) / (staff.daysOn || 4))})`
+      const offset = staff.shiftOffset || 0
+      const daysOn = staff.daysOn || 4
+
+      // Calculate group letter, handling negative offsets
+      let groupIndex = Math.floor(offset / daysOn)
+      let groupLabel: string
+
+      if (groupIndex >= 0) {
+        // Positive offsets: A, B, C, D...
+        groupLabel = String.fromCharCode(65 + groupIndex)
+      } else {
+        // Negative offsets: Z, Y, X, W... (working backwards)
+        groupLabel = String.fromCharCode(90 + groupIndex + 1)
+      }
+
+      return `${staff.daysOn}/${staff.daysOff} ${shiftType} Shift Cycle (Group ${groupLabel})`
     }
   } else {
     return `${staff.defaultStartTime} - ${staff.defaultEndTime}`
@@ -498,8 +513,8 @@ onMounted(() => {
               <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label">Group Offset</label>
-                  <input v-model.number="newStaff.shiftOffset" type="number" min="0" class="form-input" required>
-                  <p class="form-help">0 = Group A, {{ newStaff.daysOn }} = Group B, etc.</p>
+                  <input v-model.number="newStaff.shiftOffset" type="number" class="form-input" required>
+                  <p class="form-help">Positive values (0, {{ newStaff.daysOn }}, {{ (newStaff.daysOn || 4) * 2 }}...) = Groups A, B, C...<br>Negative values (-{{ newStaff.daysOn }}, -{{ (newStaff.daysOn || 4) * 2 }}...) = Earlier groups</p>
                 </div>
                 <div class="form-group">
                   <label class="form-label">Zero Start Date</label>

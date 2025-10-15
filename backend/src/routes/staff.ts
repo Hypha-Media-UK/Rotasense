@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { prisma } from '../index';
-import { daysOfWeekSchema, timeSchema, staffCategorySchema, scheduleTypeSchema, shiftPatternSchema, nonEmptyStringSchema, optionalPositiveIntSchema, optionalNonNegativeIntSchema, zeroStartDateIdSchema, validateShiftTimes } from '../validation/schemas';
+import { daysOfWeekSchema, timeSchema, staffCategorySchema, scheduleTypeSchema, shiftPatternSchema, nonEmptyStringSchema, optionalPositiveIntSchema, optionalNonNegativeIntSchema, optionalIntSchema, zeroStartDateIdSchema, validateShiftTimes } from '../validation/schemas';
 
 const router = express.Router();
 
@@ -13,7 +13,7 @@ const createStaffSchema = z.object({
   scheduleType: scheduleTypeSchema.optional(),
   daysOn: optionalPositiveIntSchema,
   daysOff: optionalPositiveIntSchema,
-  shiftOffset: optionalNonNegativeIntSchema,
+  shiftOffset: optionalIntSchema, // Now allows negative values
   zeroStartDateId: zeroStartDateIdSchema.optional(),
   shiftPattern: shiftPatternSchema.optional(),
   defaultStartTime: timeSchema.optional(),
@@ -69,7 +69,7 @@ const updateStaffSchema = z.object({
   scheduleType: scheduleTypeSchema.optional(),
   daysOn: optionalPositiveIntSchema,
   daysOff: optionalPositiveIntSchema,
-  shiftOffset: optionalNonNegativeIntSchema,
+  shiftOffset: optionalIntSchema, // Now allows negative values
   zeroStartDateId: zeroStartDateIdSchema.optional(),
   shiftPattern: shiftPatternSchema.optional(),
   defaultStartTime: timeSchema.optional(),

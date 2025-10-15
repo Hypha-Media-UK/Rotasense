@@ -16,7 +16,7 @@ const createStaffSchema = zod_1.z.object({
     scheduleType: schemas_1.scheduleTypeSchema.optional(),
     daysOn: schemas_1.optionalPositiveIntSchema,
     daysOff: schemas_1.optionalPositiveIntSchema,
-    shiftOffset: schemas_1.optionalNonNegativeIntSchema,
+    shiftOffset: schemas_1.optionalIntSchema, // Now allows negative values
     zeroStartDateId: schemas_1.zeroStartDateIdSchema.optional(),
     shiftPattern: schemas_1.shiftPatternSchema.optional(),
     defaultStartTime: schemas_1.timeSchema.optional(),
@@ -62,7 +62,7 @@ const updateStaffSchema = zod_1.z.object({
     scheduleType: schemas_1.scheduleTypeSchema.optional(),
     daysOn: schemas_1.optionalPositiveIntSchema,
     daysOff: schemas_1.optionalPositiveIntSchema,
-    shiftOffset: schemas_1.optionalNonNegativeIntSchema,
+    shiftOffset: schemas_1.optionalIntSchema, // Now allows negative values
     zeroStartDateId: schemas_1.zeroStartDateIdSchema.optional(),
     shiftPattern: schemas_1.shiftPatternSchema.optional(),
     defaultStartTime: schemas_1.timeSchema.optional(),

@@ -34,5 +34,6 @@ export declare const positiveIntSchema: z.ZodNumber;
 export declare const nonEmptyStringSchema: z.ZodString;
 export declare const optionalPositiveIntSchema: z.ZodOptional<z.ZodNumber>;
 export declare const optionalNonNegativeIntSchema: z.ZodOptional<z.ZodNumber>;
+export declare const optionalIntSchema: z.ZodOptional<z.ZodNumber>;
 export declare const zeroStartDateIdSchema: z.ZodString;
 //# sourceMappingURL=schemas.d.ts.map

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.zeroStartDateIdSchema = exports.optionalNonNegativeIntSchema = exports.optionalPositiveIntSchema = exports.nonEmptyStringSchema = exports.positiveIntSchema = exports.shiftPatternSchema = exports.scheduleTypeSchema = exports.overrideTypeSchema = exports.staffCategorySchema = exports.timeSchema = exports.daysOfWeekSchema = void 0;
+exports.zeroStartDateIdSchema = exports.optionalIntSchema = exports.optionalNonNegativeIntSchema = exports.optionalPositiveIntSchema = exports.nonEmptyStringSchema = exports.positiveIntSchema = exports.shiftPatternSchema = exports.scheduleTypeSchema = exports.overrideTypeSchema = exports.staffCategorySchema = exports.timeSchema = exports.daysOfWeekSchema = void 0;
 exports.validateShiftTimes = validateShiftTimes;
 const zod_1 = require("zod");
 // Common validation schemas used across multiple routes
@@ -53,5 +53,6 @@ exports.positiveIntSchema = zod_1.z.number().int().positive();
 exports.nonEmptyStringSchema = zod_1.z.string().min(1);
 exports.optionalPositiveIntSchema = zod_1.z.number().int().positive().optional();
 exports.optionalNonNegativeIntSchema = zod_1.z.number().int().min(0).optional();
+exports.optionalIntSchema = zod_1.z.number().int().optional(); // Allows negative values
 exports.zeroStartDateIdSchema = zod_1.z.string().min(1);
 //# sourceMappingURL=schemas.js.map

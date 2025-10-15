@@ -64,4 +64,5 @@ export const positiveIntSchema = z.number().int().positive();
 export const nonEmptyStringSchema = z.string().min(1);
 export const optionalPositiveIntSchema = z.number().int().positive().optional();
 export const optionalNonNegativeIntSchema = z.number().int().min(0).optional();
+export const optionalIntSchema = z.number().int().optional(); // Allows negative values
 export const zeroStartDateIdSchema = z.string().min(1);
