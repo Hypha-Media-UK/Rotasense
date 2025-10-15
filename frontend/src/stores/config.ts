@@ -93,6 +93,17 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  // Refresh staff data specifically (useful after bulk edits)
+  async function refreshStaffData() {
+    try {
+      const staffData = await apiService.getStaff()
+      staff.value = staffData
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to refresh staff data'
+      console.error('Error refreshing staff data:', err)
+    }
+  }
+
   // Building actions
   async function createBuilding(data: CreateBuildingForm) {
     try {
@@ -408,6 +419,7 @@ export const useConfigStore = defineStore('config', () => {
 
     // Actions
     fetchAllData,
+    refreshStaffData,
     createBuilding,
     updateBuilding,
     deleteBuilding,

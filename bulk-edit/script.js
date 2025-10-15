@@ -349,7 +349,7 @@ async function handleSaveRow(event) {
         // Update UI
         renderStaffTable();
         updateStats();
-        showMessage('success', `Successfully updated ${updatedStaff.name}`);
+        showMessage('success', `Successfully updated ${updatedStaff.name}. Changes will appear in the main application when you switch back to it.`);
 
     } catch (error) {
         console.error('Error saving staff:', error);
@@ -419,7 +419,7 @@ async function saveAllChanges() {
         // Update UI
         renderStaffTable();
         updateStats();
-        showMessage('success', `Successfully saved changes for ${responses.length} staff members`);
+        showMessage('success', `Successfully saved changes for ${responses.length} staff members. Changes will appear in the main application when you switch back to it.`);
 
     } catch (error) {
         console.error('Error saving all changes:', error);
