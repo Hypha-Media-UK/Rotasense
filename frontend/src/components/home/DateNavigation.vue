@@ -21,9 +21,6 @@ const dayLabels = computed(() => {
     isWeekend: date.getDay() === 0 || date.getDay() === 6 // Sunday or Saturday
   }))
 
-  // Debug can be enabled if needed
-  // console.log('Week dates:', labels.map(l => `${l.dayNumber}: ${format(l.date, 'yyyy-MM-dd')} (${format(l.date, 'EEEE')})`))
-
   return labels
 })
 

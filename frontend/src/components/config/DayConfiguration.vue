@@ -38,7 +38,15 @@ const showDayPanel = ref(false)
 const showAddPeriodForm = ref(false)
 
 // Day configuration
-const dayTimes = ref<Record<DayOfWeek, { startTime: string; endTime: string }>>({})
+const dayTimes = ref<Record<DayOfWeek, { startTime: string; endTime: string }>>({
+  monday: { startTime: '08:00', endTime: '20:00' },
+  tuesday: { startTime: '08:00', endTime: '20:00' },
+  wednesday: { startTime: '08:00', endTime: '20:00' },
+  thursday: { startTime: '08:00', endTime: '20:00' },
+  friday: { startTime: '08:00', endTime: '20:00' },
+  saturday: { startTime: '08:00', endTime: '20:00' },
+  sunday: { startTime: '08:00', endTime: '20:00' }
+})
 
 // Add period form state
 const newPeriodForm = ref({

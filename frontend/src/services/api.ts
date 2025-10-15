@@ -23,7 +23,28 @@ import type {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 class ApiService {
+  // Request deduplication cache
+  private pendingRequests = new Map<string, Promise<any>>()
+
+  private getCacheKey(endpoint: string, options: RequestInit = {}): string {
+    const method = options.method || 'GET'
+    const body = options.body || ''
+    return `${method}:${endpoint}:${body}`
+  }
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    // Only deduplicate GET requests to avoid issues with mutations
+    const method = options.method || 'GET'
+    const shouldDeduplicate = method === 'GET'
+
+    if (shouldDeduplicate) {
+      const cacheKey = this.getCacheKey(endpoint, options)
+
+      // Return existing promise if request is already in flight
+      if (this.pendingRequests.has(cacheKey)) {
+        return this.pendingRequests.get(cacheKey)!
+      }
+    }
+
     const url = `${API_BASE_URL}${endpoint}`;
 
     const config: RequestInit = {
@@ -34,6 +55,22 @@ class ApiService {
       ...options,
     };
 
+    const requestPromise = this.executeRequest<T>(url, config)
+
+    if (shouldDeduplicate) {
+      const cacheKey = this.getCacheKey(endpoint, options)
+      this.pendingRequests.set(cacheKey, requestPromise)
+
+      // Clean up cache when request completes
+      requestPromise.finally(() => {
+        this.pendingRequests.delete(cacheKey)
+      })
+    }
+
+    return requestPromise
+  }
+
+  private async executeRequest<T>(url: string, config: RequestInit): Promise<T> {
     try {
       const response = await fetch(url, config);
 
@@ -50,7 +87,7 @@ class ApiService {
       const data = await response.json();
       return this.parseJsonFields(data);
     } catch (error) {
-      console.error(`API request failed: ${endpoint}`, error);
+      console.error(`API request failed: ${url}`, error);
       throw error;
     }
   }

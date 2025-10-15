@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { apiService } from '@/services/api'
+import { withErrorHandling } from '@/utils/errorHandling'
 import type {
   Building,
   Department,
@@ -54,43 +55,43 @@ export const useConfigStore = defineStore('config', () => {
   // Actions
   async function fetchAllData() {
     loading.value = true
-    error.value = null
 
-    try {
-      const [
-        buildingsData,
-        departmentsData,
-        servicesData,
-        staffData,
-        allocationsData,
-        runnerPoolsData,
-        runnerAllocationsData,
-        settingsData
-      ] = await Promise.all([
-        apiService.getBuildings(),
-        apiService.getDepartments(),
-        apiService.getServices(),
-        apiService.getStaff(),
-        apiService.getAllocations(),
-        apiService.getRunnerPools(),
-        apiService.getRunnerAllocations(),
-        apiService.getSettings()
-      ])
+    await withErrorHandling(
+      async () => {
+        const [
+          buildingsData,
+          departmentsData,
+          servicesData,
+          staffData,
+          allocationsData,
+          runnerPoolsData,
+          runnerAllocationsData,
+          settingsData
+        ] = await Promise.all([
+          apiService.getBuildings(),
+          apiService.getDepartments(),
+          apiService.getServices(),
+          apiService.getStaff(),
+          apiService.getAllocations(),
+          apiService.getRunnerPools(),
+          apiService.getRunnerAllocations(),
+          apiService.getSettings()
+        ])
 
-      buildings.value = buildingsData
-      departments.value = departmentsData
-      services.value = servicesData
-      staff.value = staffData
-      allocations.value = allocationsData
-      runnerPools.value = runnerPoolsData
-      runnerAllocations.value = runnerAllocationsData
-      settings.value = settingsData
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch data'
-      console.error('Error fetching config data:', err)
-    } finally {
-      loading.value = false
-    }
+        buildings.value = buildingsData
+        departments.value = departmentsData
+        services.value = servicesData
+        staff.value = staffData
+        allocations.value = allocationsData
+        runnerPools.value = runnerPoolsData
+        runnerAllocations.value = runnerAllocationsData
+        settings.value = settingsData
+      },
+      error,
+      'fetching configuration data'
+    )
+
+    loading.value = false
   }
 
   // Refresh staff data specifically (useful after bulk edits)

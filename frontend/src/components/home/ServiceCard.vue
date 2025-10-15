@@ -2,15 +2,20 @@
 import type { ServiceStatus, Staff } from '@/types'
 import { computed, ref } from 'vue'
 import StaffReassignmentModal from './StaffReassignmentModal.vue'
-import { getDaySupervisorsForDate, getNightSupervisorsForDate } from '@/utils/shiftCalculations'
-import { useConfigStore } from '@/stores/config'
-import { useHomeStore } from '@/stores/home'
+// Note: Removed unused imports - shift calculation logic moved to composable
+import { useStaffOrganization } from '@/composables/useStaffOrganization'
 
 interface Props {
   serviceStatus: ServiceStatus
 }
 
 const props = defineProps<Props>()
+
+// Use staff organization composable
+const { organizedStaff } = useStaffOrganization({
+  assignedStaff: props.serviceStatus.assignedStaff,
+  entityType: 'service'
+})
 
 // Modal state
 const showReassignmentModal = ref(false)
@@ -82,92 +87,7 @@ function getDisplayHours(staffStatus: any, isInNightSection: boolean = false): s
   return `${staff.defaultStartTime} - ${staff.defaultEndTime}`
 }
 
-// Helper function to sort staff with supervisors first
-function sortStaffWithSupervisorsFirst(staff: any[]): any[] {
-  return staff.sort((a, b) => {
-    // Sort supervisors to the top
-    if (a.staff.category === 'SUPERVISOR' && b.staff.category !== 'SUPERVISOR') return -1
-    if (a.staff.category !== 'SUPERVISOR' && b.staff.category === 'SUPERVISOR') return 1
-    // Then sort by name
-    return a.staff.name.localeCompare(b.staff.name)
-  })
-}
-
-// Organize staff by shift start time and day/night
-const organizedStaff = computed(() => {
-  const configStore = useConfigStore()
-  const homeStore = useHomeStore()
-  const staffByTime = new Map()
-
-  props.serviceStatus.assignedStaff.forEach(staffStatus => {
-    const startTime = staffStatus.staff.defaultStartTime
-
-    if (!staffByTime.has(startTime)) {
-      staffByTime.set(startTime, { dayStaff: [], nightStaff: [] })
-    }
-
-    // For supervisors, use enhanced logic to support both day and night display
-    if (staffStatus.staff.category === 'SUPERVISOR') {
-      // Get all supervisors assigned to this service
-      const allSupervisors = props.serviceStatus.assignedStaff
-        .map(s => s.staff)
-        .filter(s => s.category === 'SUPERVISOR')
-
-      // Get zero start date (use default if staff doesn't have one)
-      const zeroStartDateId = staffStatus.staff.zeroStartDateId || 'default'
-      const zeroStartDates = configStore.settings?.zeroStartDates || []
-      const zeroStartDateEntry = zeroStartDates.find((zsd: any) => zsd.id === zeroStartDateId)
-
-      if (zeroStartDateEntry?.date) {
-        const [year, month, day] = zeroStartDateEntry.date.split('-').map(Number)
-        if (year && month && day) {
-          const zeroStartDate = new Date(year, month - 1, day)
-
-        // Check if this supervisor should appear in day section
-        const daySupervisors = getDaySupervisorsForDate(allSupervisors, homeStore.selectedDate, zeroStartDate)
-        const isDaySuper = daySupervisors.some(s => s.id === staffStatus.staff.id)
-
-        // Check if this supervisor should appear in night section
-        const nightSupervisors = getNightSupervisorsForDate(allSupervisors, homeStore.selectedDate, zeroStartDate)
-        const isNightSuper = nightSupervisors.some(s => s.id === staffStatus.staff.id)
-
-        if (isDaySuper) {
-          staffByTime.get(startTime).dayStaff.push(staffStatus)
-        }
-        if (isNightSuper) {
-          staffByTime.get(startTime).nightStaff.push(staffStatus)
-        }
-        }
-      } else {
-        // Fallback to current logic if no zero start date
-        const isCurrentlyNightShift = staffStatus.currentShiftType === 'night'
-        if (isCurrentlyNightShift) {
-          staffByTime.get(startTime).nightStaff.push(staffStatus)
-        } else {
-          staffByTime.get(startTime).dayStaff.push(staffStatus)
-        }
-      }
-    } else {
-      // For regular staff, use existing logic
-      const isCurrentlyNightShift = staffStatus.currentShiftType === 'night'
-
-      if (isCurrentlyNightShift) {
-        staffByTime.get(startTime).nightStaff.push(staffStatus)
-      } else {
-        staffByTime.get(startTime).dayStaff.push(staffStatus)
-      }
-    }
-  })
-
-  // Sort by start time and return as array
-  return Array.from(staffByTime.entries())
-    .sort(([timeA], [timeB]) => timeA.localeCompare(timeB))
-    .map(([startTime, staff]) => ({
-      startTime,
-      dayStaff: sortStaffWithSupervisorsFirst(staff.dayStaff),
-      nightStaff: sortStaffWithSupervisorsFirst(staff.nightStaff)
-    }))
-})
+// Note: Staff organization logic moved to useStaffOrganization composable
 
 
 </script>
@@ -189,7 +109,7 @@ const organizedStaff = computed(() => {
     </header>
 
     <section v-if="serviceStatus.assignedStaff.length > 0">
-      <div v-for="(timeGroup, index) in organizedStaff" :key="timeGroup.startTime">
+      <div v-for="(timeGroup, index) in organizedStaff" :key="timeGroup.timeLabel">
         <!-- Time divider (except for first group) -->
         <div v-if="index > 0" class="shift-divider"></div>
 

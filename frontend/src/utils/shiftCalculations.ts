@@ -1,5 +1,39 @@
 import type { Staff, DayOfWeek } from '@/types'
 
+// Caching for expensive shift calculations
+const shiftCalculationCache = new Map<string, any>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+interface CacheEntry<T> {
+  value: T
+  timestamp: number
+}
+
+function getCacheKey(prefix: string, ...args: any[]): string {
+  return `${prefix}:${args.map(arg =>
+    arg instanceof Date ? arg.getTime() : JSON.stringify(arg)
+  ).join(':')}`
+}
+
+function getCachedValue<T>(key: string): T | null {
+  const entry = shiftCalculationCache.get(key) as CacheEntry<T> | undefined
+  if (!entry) return null
+
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    shiftCalculationCache.delete(key)
+    return null
+  }
+
+  return entry.value
+}
+
+function setCachedValue<T>(key: string, value: T): void {
+  shiftCalculationCache.set(key, {
+    value,
+    timestamp: Date.now()
+  })
+}
+
 export interface SupervisorShiftInfo {
   isOnDuty: boolean;
   shiftType: 'day' | 'night';
@@ -17,6 +51,11 @@ export function calculateSupervisorShiftInfo(
   targetDate: Date,
   zeroDate: Date
 ): SupervisorShiftInfo {
+  // Check cache first
+  const cacheKey = getCacheKey('supervisorShift', staff.id, targetDate, zeroDate)
+  const cached = getCachedValue<SupervisorShiftInfo>(cacheKey)
+  if (cached) return cached
+
   if (staff.shiftPattern !== 'ROTATING_DAY_NIGHT') {
     throw new Error('This function is only for rotating day/night supervisors');
   }
@@ -59,11 +98,15 @@ export function calculateSupervisorShiftInfo(
     shiftType = 'night'; // Default to night when off duty
   }
 
-  return {
+  const result = {
     isOnDuty,
     shiftType,
     cycleDay
   };
+
+  // Cache the result
+  setCachedValue(cacheKey, result)
+  return result
 }
 
 /**
@@ -74,17 +117,27 @@ export function calculateEnhancedShiftStatus(
   targetDate: Date,
   zeroDate: Date
 ): boolean {
+  // Check cache first
+  const cacheKey = getCacheKey('enhancedShift', staff.id, targetDate, zeroDate)
+  const cached = getCachedValue<boolean>(cacheKey)
+  if (cached !== null) return cached
+
   if (staff.scheduleType !== 'SHIFT_CYCLE') {
     return false; // Daily schedule staff handled elsewhere
   }
 
+  let result: boolean
   if (staff.shiftPattern === 'ROTATING_DAY_NIGHT') {
     const shiftInfo = calculateSupervisorShiftInfo(staff, targetDate, zeroDate);
-    return shiftInfo.isOnDuty;
+    result = shiftInfo.isOnDuty;
   } else {
     // Existing logic for fixed day/night staff
-    return calculateShiftStatus(staff, targetDate, zeroDate);
+    result = calculateShiftStatus(staff, targetDate, zeroDate);
   }
+
+  // Cache the result
+  setCachedValue(cacheKey, result)
+  return result
 }
 
 /**
@@ -114,10 +167,7 @@ export function calculateShiftStatus(staff: Staff, targetDate: Date, zeroDate: D
 
   const result = cycleDay < daysOn;
 
-  // Debug can be enabled if needed
-  // if (['AJ', 'Carla Barton'].includes(staff.name)) {
-  //   console.log(`CALC ${staff.name}: daysSince=${daysSinceZero}, offset=${shiftOffset}, cycleDay=${cycleDay}, result=${result}`);
-  // }
+
 
   return result;
 }

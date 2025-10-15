@@ -123,39 +123,66 @@ const updateStaffSchema = z.object({
 // GET /api/staff - Get all staff members
 router.get('/', async (req, res) => {
   try {
-    const { category } = req.query;
-    
+    const { category, include } = req.query;
+
     const whereClause: any = {};
     if (category && typeof category === 'string') {
       whereClause.category = category.toUpperCase();
     }
 
-    const staff = await prisma.staff.findMany({
-      where: whereClause,
-      include: {
-        staff_allocations: {
-          include: {
-            departments: {
-              include: {
-                buildings: true
-              }
-            },
-            services: true
-          }
-        },
-        runner_pools: true,
-        runner_allocations: {
-          include: {
-            departments: {
-              include: {
-                buildings: true
-              }
-            },
-            services: true,
-            runner_pools: true
+    // Determine what to include based on query parameter
+    const includeParam = typeof include === 'string' ? include : 'full'
+    let includeClause: any = {}
+
+    switch (includeParam) {
+      case 'minimal':
+        // Only basic staff data, no relations
+        includeClause = {}
+        break
+      case 'allocations':
+        // Include allocations but not runner data
+        includeClause = {
+          staff_allocations: {
+            include: {
+              departments: { select: { id: true, name: true, buildingId: true } },
+              services: { select: { id: true, name: true } }
+            }
           }
         }
-      },
+        break
+      case 'full':
+      default:
+        // Full include (current behavior)
+        includeClause = {
+          staff_allocations: {
+            include: {
+              departments: {
+                include: {
+                  buildings: true
+                }
+              },
+              services: true
+            }
+          },
+          runner_pools: true,
+          runner_allocations: {
+            include: {
+              departments: {
+                include: {
+                  buildings: true
+                }
+              },
+              services: true,
+              runner_pools: true
+            }
+          }
+        }
+        break
+    }
+
+    const staff = await prisma.staff.findMany({
+      where: whereClause,
+      include: includeClause,
       orderBy: { name: 'asc' }
     });
 

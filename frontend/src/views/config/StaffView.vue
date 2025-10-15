@@ -96,7 +96,7 @@ function getStaffScheduleDisplay(staff: Staff): string {
       const daysOn = staff.daysOn || 4
 
       // Calculate group letter, handling negative offsets
-      let groupIndex = Math.floor(offset / daysOn)
+      const groupIndex = Math.floor(offset / daysOn)
       let groupLabel: string
 
       if (groupIndex >= 0) {
@@ -232,7 +232,7 @@ async function deleteStaff(staff: Staff) {
     await configStore.deleteStaff(staff.id)
     // Clean up localStorage for this staff member
     try {
-      localStorage.removeItem(getStaffTimesStorageKey(staff.id))
+      localStorage.removeItem(`rotasense_staff_times_${staff.id}`)
     } catch (error) {
       console.warn('Failed to clean up staff times from localStorage:', error)
     }
@@ -604,13 +604,13 @@ onMounted(() => {
           <div v-else class="current-allocation">
             <div class="allocation-card">
               <div class="allocation-info">
-                <h4 v-if="currentStaffAllocations[0].departments">{{ currentStaffAllocations[0].departments.name }}</h4>
-                <h4 v-else-if="currentStaffAllocations[0].services">{{ currentStaffAllocations[0].services.name }}</h4>
+                <h4 v-if="currentStaffAllocations[0]?.department">{{ currentStaffAllocations[0].department.name }}</h4>
+                <h4 v-else-if="currentStaffAllocations[0]?.service">{{ currentStaffAllocations[0].service.name }}</h4>
                 <p class="allocation-type">
-                  {{ currentStaffAllocations[0].departments ? 'Department' : 'Service' }} allocation - schedule configured in staff details
+                  {{ currentStaffAllocations[0]?.department ? 'Department' : 'Service' }} allocation - schedule configured in staff details
                 </p>
               </div>
-              <button @click="deleteAllocation(currentStaffAllocations[0].id)" class="btn btn-danger btn-sm">
+              <button @click="currentStaffAllocations[0]?.id && deleteAllocation(currentStaffAllocations[0].id)" class="btn btn-danger btn-sm">
                 Change Allocation
               </button>
             </div>
@@ -712,7 +712,7 @@ onMounted(() => {
         <button
           v-for="tab in tabs"
           :key="tab.key"
-          @click="activeTab = tab.key"
+          @click="activeTab = tab.key as 'regular' | 'relief' | 'supervisor'"
           :class="{ active: activeTab === tab.key }"
           class="tab-button"
         >
@@ -753,8 +753,8 @@ onMounted(() => {
               <h3>{{ staff.name }}</h3>
               <div v-if="staff.allocations && staff.allocations.length > 0" class="staff-allocations">
                 <template v-for="(allocation, index) in staff.allocations" :key="allocation.id">
-                  <span v-if="allocation.departments">{{ allocation.departments.name }}</span>
-                  <span v-else-if="allocation.services">{{ allocation.services.name }}</span>
+                  <span v-if="allocation.department">{{ allocation.department.name }}</span>
+                  <span v-else-if="allocation.service">{{ allocation.service.name }}</span>
                   <span v-if="index < staff.allocations.length - 1">, </span>
                 </template>
               </div>

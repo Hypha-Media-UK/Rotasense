@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { format, addDays } from 'date-fns'
+import { format } from 'date-fns'
 import Modal from '@/components/Modal.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import { useConfigStore } from '@/stores/config'
@@ -35,7 +35,7 @@ const availableLocations = computed(() => {
   if (assignmentType.value === 'department') {
     return configStore.departments.map(dept => ({
       id: dept.id,
-      name: `${dept.name} (${dept.buildings?.name || 'Unknown Building'})`
+      name: `${dept.name} (${dept.building?.name || 'Unknown Building'})`
     }))
   } else {
     return configStore.services.map(service => ({
@@ -147,9 +147,9 @@ function populateFormFromOverride() {
 
   // Set dates - handle timezone consistently
   // Extract date part from ISO string to avoid timezone conversion
-  startDate.value = override.date.split('T')[0]
+  startDate.value = override.date?.split('T')[0] || ''
   if (override.endDate) {
-    endDate.value = override.endDate.split('T')[0]
+    endDate.value = override.endDate?.split('T')[0] || ''
   } else {
     endDate.value = ''
   }
@@ -194,6 +194,7 @@ async function saveTemporaryAssignment() {
     // Create ISO strings that represent the local date/time without timezone conversion
     function createLocalISOString(dateStr: string, hours: number, minutes: number, seconds: number, ms: number): string {
       const [year, month, day] = dateStr.split('-').map(Number)
+      if (!year || !month || !day) throw new Error('Invalid date format')
       const date = new Date(year, month - 1, day, hours, minutes, seconds, ms)
 
       // Get timezone offset and adjust to create a "local" ISO string

@@ -14,6 +14,41 @@ import type {
 } from '@/types'
 import { calculateEnhancedShiftStatus, getStaffShiftType, isRotatingSupervisor } from '@/utils/shiftCalculations'
 
+// Memoization cache for expensive computations
+const staffStatusCache = new Map<string, StaffStatus>()
+const shiftCalculationCache = new Map<string, boolean>()
+const timeStatusCache = new Map<string, string>()
+
+// Cache key generators
+const getStaffCacheKey = (staffId: number, date: Date, overrideId?: number) =>
+  `${staffId}-${format(date, 'yyyy-MM-dd')}-${overrideId || 'none'}`
+
+const getShiftCacheKey = (staffId: number, date: Date, zeroDateId?: string) =>
+  `${staffId}-${format(date, 'yyyy-MM-dd')}-${zeroDateId || 'none'}`
+
+const getTimeCacheKey = (staffId: number, currentTime: Date) =>
+  `${staffId}-${format(currentTime, 'yyyy-MM-dd-HH:mm')}`
+
+// Cache cleanup function
+const clearCacheForDate = (date: Date) => {
+  const dateStr = format(date, 'yyyy-MM-dd')
+  for (const key of staffStatusCache.keys()) {
+    if (key.includes(dateStr)) {
+      staffStatusCache.delete(key)
+    }
+  }
+  for (const key of shiftCalculationCache.keys()) {
+    if (key.includes(dateStr)) {
+      shiftCalculationCache.delete(key)
+    }
+  }
+  for (const key of timeStatusCache.keys()) {
+    if (key.includes(dateStr)) {
+      timeStatusCache.delete(key)
+    }
+  }
+}
+
 export const useHomeStore = defineStore('home', () => {
   // State
   const selectedDate = ref(new Date())
@@ -46,12 +81,35 @@ export const useHomeStore = defineStore('home', () => {
     const zeroStartDates = configStore.settings?.zeroStartDates || []
     if (zeroStartDates.length > 0) {
       // Parse as local date to avoid timezone issues
-      const dateString = zeroStartDates[0].date
+      const dateString = zeroStartDates[0]?.date
+      if (!dateString) return new Date()
       const [year, month, day] = dateString.split('-').map(Number)
+      if (!year || !month || !day) return new Date()
       return new Date(year, month - 1, day)
     }
     // Fallback to a default date if no zero start dates are configured
     return new Date(2024, 0, 1) // January 1, 2024 in local timezone
+  }
+
+  // Memoized helper functions
+  const getMemoizedShiftStatus = (staff: any, date: Date, zeroStartDate: Date): boolean => {
+    const cacheKey = getShiftCacheKey(staff.id, date, staff.zeroStartDateId)
+    if (shiftCalculationCache.has(cacheKey)) {
+      return shiftCalculationCache.get(cacheKey)!
+    }
+    const result = calculateEnhancedShiftStatus(staff, date, zeroStartDate)
+    shiftCalculationCache.set(cacheKey, result)
+    return result
+  }
+
+  const getMemoizedTimeStatus = (staff: any, currentTime: Date): string => {
+    const cacheKey = getTimeCacheKey(staff.id, currentTime)
+    if (timeStatusCache.has(cacheKey)) {
+      return timeStatusCache.get(cacheKey)!
+    }
+    const result = calculateTimeStatus(staff, currentTime)
+    timeStatusCache.set(cacheKey, result)
+    return result
   }
 
   // Calculate staff status for the selected date
@@ -63,12 +121,11 @@ export const useHomeStore = defineStore('home', () => {
         // Check if staff is scheduled to work on the selected date
         if (staff.scheduleType === 'SHIFT_CYCLE') {
           // Get the specific zero start date for this staff member
-          const zeroStartDate = getZeroStartDate(staff.zeroStartDateId, configStore.settings)
+          const zeroStartDate = getZeroStartDate(staff.zeroStartDateId || 'default', configStore.settings)
           if (!zeroStartDate) {
-            console.log(`No zero start date found for ${staff.name} (ID: ${staff.zeroStartDateId})`)
             return false
           }
-          return calculateEnhancedShiftStatus(staff, selectedDate.value, zeroStartDate)
+          return getMemoizedShiftStatus(staff, selectedDate.value, zeroStartDate)
         } else if (staff.scheduleType === 'DAILY') {
           return staff.contractedDays.includes(selectedDayOfWeek.value)
         }
@@ -111,10 +168,10 @@ export const useHomeStore = defineStore('home', () => {
           currentLocation = override.service.name
         }
       } else if (allocation) {
-        if (allocation.departments) {
-          currentLocation = allocation.departments.name
-        } else if (allocation.services) {
-          currentLocation = allocation.services.name
+        if (allocation.department) {
+          currentLocation = allocation.department.name
+        } else if (allocation.service) {
+          currentLocation = allocation.service.name
         }
       } else if (staff.runnerPoolId) {
         // Staff assigned to runner pool should be considered allocated
@@ -131,7 +188,7 @@ export const useHomeStore = defineStore('home', () => {
       let timeStatus = 'scheduled' // Default for future/past dates
 
       if (isCurrentDay && !isAbsent && currentLocation !== 'Unallocated') {
-        timeStatus = calculateTimeStatus(staff, new Date())
+        timeStatus = getMemoizedTimeStatus(staff, new Date())
       }
 
 
@@ -139,7 +196,7 @@ export const useHomeStore = defineStore('home', () => {
       // Calculate shift type for rotating supervisors
       let currentShiftType: 'day' | 'night' = 'day' // default
       if (staff.scheduleType === 'SHIFT_CYCLE') {
-        const zeroStartDate = getZeroStartDate(staff.zeroStartDateId, configStore.settings)
+        const zeroStartDate = getZeroStartDate(staff.zeroStartDateId || 'default', configStore.settings)
         if (zeroStartDate) {
           currentShiftType = getStaffShiftType(staff, selectedDate.value, zeroStartDate)
         }
@@ -346,9 +403,6 @@ export const useHomeStore = defineStore('home', () => {
     const [year, month, day] = dateString.split('-').map(Number)
     const result = new Date(year, month - 1, day) // month is 0-indexed
 
-    // Debug can be enabled if needed
-    // console.log(`getZeroStartDate: input="${dateString}" -> local date created`)
-
     return result
   }
 
@@ -402,40 +456,7 @@ export const useHomeStore = defineStore('home', () => {
     return hours * 60 + minutes
   }
 
-  // Test function for overnight shift logic (for development/debugging)
-  function testOvernightShiftLogic() {
-    const testStaff = {
-      name: 'Test Overnight Staff',
-      defaultStartTime: '13:00',
-      defaultEndTime: '01:00',
-      scheduleType: 'DAILY',
-      contractedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
-    }
-
-    const testTimes = [
-      '08:00', // Should be 'scheduled' (before shift start)
-      '12:00', // Should be 'scheduled' (before shift start)
-      '13:00', // Should be 'active' (shift start)
-      '18:00', // Should be 'active' (during shift)
-      '23:00', // Should be 'active' (during shift)
-      '01:00', // Should be 'active' (shift end)
-      '02:00', // Should be 'off-duty' (after shift, no more shifts today)
-      '06:00'  // Should be 'off-duty' (after shift, no more shifts today)
-    ]
-
-    console.log('Testing overnight shift logic for 13:00-01:00 shift:')
-    testTimes.forEach(timeStr => {
-      const [hours, minutes] = timeStr.split(':').map(Number)
-      const testDate = new Date()
-      testDate.setHours(hours, minutes, 0, 0)
-
-      const result = calculateTimeStatus(testStaff, testDate)
-      console.log(`${timeStr}: ${result}`)
-    })
-  }
-
-  // Expose test function for development
-  ;(window as any).testOvernightShiftLogic = testOvernightShiftLogic
+  // Note: Test functions removed for production
 
   // Helper function to calculate time-based status with overnight shift support
   function calculateTimeStatus(staff: any, currentDateTime: Date): string {
@@ -570,7 +591,11 @@ export const useHomeStore = defineStore('home', () => {
   }
 
   function setSelectedDate(date: Date) {
+    // Clear cache for the old date
+    clearCacheForDate(selectedDate.value)
     selectedDate.value = date
+    // Clear cache for the new date to ensure fresh calculations
+    clearCacheForDate(date)
     // Fetch overrides for the new date
     fetchOverrides(date)
   }
