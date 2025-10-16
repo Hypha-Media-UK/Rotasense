@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import StaffReassignmentModal from './StaffReassignmentModal.vue'
 import { useConfigStore } from '@/stores/config'
 import { useHomeStore } from '@/stores/home'
+import { getDisplayHours } from '@/utils/displayUtils'
 
 interface Props {
   runnerPoolStatus: RunnerPoolStatus
@@ -74,23 +75,7 @@ const statusText = computed(() => {
   return 'Available'
 })
 
-// Helper function to get display hours based on shift type
-function getDisplayHours(staffStatus: any): string {
-  const staff = staffStatus.staff
-
-  // For rotating supervisors, show hours based on current shift type
-  if (staffStatus.isRotatingSchedule && staffStatus.currentShiftType === 'night') {
-    return '20:00 - 08:00'
-  }
-
-  // For fixed night staff, show night hours
-  if (staff.isNightStaff) {
-    return '20:00 - 08:00'
-  }
-
-  // Default to day hours
-  return `${staff.defaultStartTime} - ${staff.defaultEndTime}`
-}
+// Note: Display hours logic moved to displayUtils
 
 // Organize staff by shift start time with supervisors always at top
 const organizedStaff = computed(() => {

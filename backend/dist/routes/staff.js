@@ -40,21 +40,6 @@ const createStaffSchema = zod_1.z.object({
     return true;
 }, {
     message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
-}).refine((data) => {
-    // Validate rotating day/night pattern requirements
-    if (data.shiftPattern === 'ROTATING_DAY_NIGHT') {
-        // Only supervisors can have rotating shifts
-        if (data.category !== 'SUPERVISOR') {
-            return false;
-        }
-        // Rotating shifts require SHIFT_CYCLE schedule type
-        if (data.scheduleType !== 'SHIFT_CYCLE') {
-            return false;
-        }
-    }
-    return true;
-}, {
-    message: "Rotating day/night shifts are only available for supervisors with SHIFT_CYCLE schedule type"
 });
 const updateStaffSchema = zod_1.z.object({
     name: schemas_1.nonEmptyStringSchema.optional(),
@@ -87,56 +72,66 @@ const updateStaffSchema = zod_1.z.object({
     return true;
 }, {
     message: "Invalid shift times: shift duration must be between 1-12 hours and start/end times cannot be the same"
-}).refine((data) => {
-    // Validate rotating day/night pattern requirements
-    if (data.shiftPattern === 'ROTATING_DAY_NIGHT') {
-        // Only supervisors can have rotating shifts
-        if (data.category !== 'SUPERVISOR') {
-            return false;
-        }
-        // Rotating shifts require SHIFT_CYCLE schedule type
-        if (data.scheduleType !== 'SHIFT_CYCLE') {
-            return false;
-        }
-    }
-    return true;
-}, {
-    message: "Rotating day/night shifts are only available for supervisors with SHIFT_CYCLE schedule type"
 });
 // GET /api/staff - Get all staff members
 router.get('/', async (req, res) => {
     try {
-        const { category } = req.query;
+        const { category, include } = req.query;
         const whereClause = {};
         if (category && typeof category === 'string') {
             whereClause.category = category.toUpperCase();
         }
+        // Determine what to include based on query parameter
+        const includeParam = typeof include === 'string' ? include : 'full';
+        let includeClause = {};
+        switch (includeParam) {
+            case 'minimal':
+                // Only basic staff data, no relations
+                includeClause = {};
+                break;
+            case 'allocations':
+                // Include allocations but not runner data
+                includeClause = {
+                    staff_allocations: {
+                        include: {
+                            departments: { select: { id: true, name: true, buildingId: true } },
+                            services: { select: { id: true, name: true } }
+                        }
+                    }
+                };
+                break;
+            case 'full':
+            default:
+                // Full include (current behavior)
+                includeClause = {
+                    staff_allocations: {
+                        include: {
+                            departments: {
+                                include: {
+                                    buildings: true
+                                }
+                            },
+                            services: true
+                        }
+                    },
+                    runner_pools: true,
+                    runner_allocations: {
+                        include: {
+                            departments: {
+                                include: {
+                                    buildings: true
+                                }
+                            },
+                            services: true,
+                            runner_pools: true
+                        }
+                    }
+                };
+                break;
+        }
         const staff = await index_1.prisma.staff.findMany({
             where: whereClause,
-            include: {
-                staff_allocations: {
-                    include: {
-                        departments: {
-                            include: {
-                                buildings: true
-                            }
-                        },
-                        services: true
-                    }
-                },
-                runner_pools: true,
-                runner_allocations: {
-                    include: {
-                        departments: {
-                            include: {
-                                buildings: true
-                            }
-                        },
-                        services: true,
-                        runner_pools: true
-                    }
-                }
-            },
+            include: includeClause,
             orderBy: { name: 'asc' }
         });
         // Parse JSON strings back to arrays

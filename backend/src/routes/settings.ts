@@ -25,7 +25,8 @@ router.get('/', async (req, res) => {
     if (!settings) {
       settings = await prisma.settings.create({
         data: {
-          timeFormat: '24'
+          timeFormat: '24',
+          zeroStartDates: JSON.stringify([])
         }
       });
     }

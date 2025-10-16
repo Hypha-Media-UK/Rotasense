@@ -57,7 +57,7 @@ export const overrideTypeSchema = z.enum(['TEMPORARY_ALLOCATION', 'ABSENCE']);
 
 export const scheduleTypeSchema = z.enum(['DAILY', 'SHIFT_CYCLE']);
 
-export const shiftPatternSchema = z.enum(['FIXED', 'ROTATING_DAY_NIGHT']);
+export const shiftPatternSchema = z.enum(['FIXED']);
 
 // Common field validations
 export const positiveIntSchema = z.number().int().positive();

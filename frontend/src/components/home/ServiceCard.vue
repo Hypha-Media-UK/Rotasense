@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import StaffReassignmentModal from './StaffReassignmentModal.vue'
 // Note: Removed unused imports - shift calculation logic moved to composable
 import { useStaffOrganization } from '@/composables/useStaffOrganization'
+import { getDisplayHours } from '@/utils/displayUtils'
 
 interface Props {
   serviceStatus: ServiceStatus
@@ -60,34 +61,8 @@ const statusText = computed(() => {
   return 'Closed'
 })
 
-// Helper function to get display hours based on shift type
-function getDisplayHours(staffStatus: any, isInNightSection: boolean = false): string {
-  const staff = staffStatus.staff
-
-  // For supervisors, show appropriate hours based on section
-  if (staff.category === 'SUPERVISOR') {
-    if (isInNightSection) {
-      return '20:00 - 08:00'
-    } else {
-      return '08:00 - 20:00'
-    }
-  }
-
-  // For rotating supervisors (legacy), show hours based on current shift type
-  if (staffStatus.isRotatingSchedule && staffStatus.currentShiftType === 'night') {
-    return '20:00 - 08:00'
-  }
-
-  // For fixed night staff, show night hours
-  if (staff.isNightStaff) {
-    return '20:00 - 08:00'
-  }
-
-  // Default to contracted hours
-  return `${staff.defaultStartTime} - ${staff.defaultEndTime}`
-}
-
 // Note: Staff organization logic moved to useStaffOrganization composable
+// Note: Display hours logic moved to displayUtils
 
 
 </script>

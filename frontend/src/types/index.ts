@@ -1,7 +1,7 @@
 // Enums
 export type StaffCategory = 'REGULAR' | 'RELIEF' | 'SUPERVISOR';
 export type ScheduleType = 'DAILY' | 'SHIFT_CYCLE';
-export type ShiftPattern = 'FIXED' | 'ROTATING_DAY_NIGHT';
+export type ShiftPattern = 'FIXED';
 export type OverrideType = 'TEMPORARY_ALLOCATION' | 'ABSENCE';
 export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
@@ -284,6 +284,7 @@ export interface DepartmentStatus {
   isUnderstaffed: boolean;
   requiredStaff: number;
   activeStaff: number;
+  scheduledStaff: number;
 }
 
 export interface ServiceStatus {

@@ -58,7 +58,15 @@ async function main() {
   // Create default settings with zero start dates
   await prisma.settings.upsert({
     where: { id: 1 },
-    update: {},
+    update: {
+      zeroStartDates: JSON.stringify([
+        {
+          id: 'default',
+          name: 'Default (2024)',
+          date: '2024-01-01'
+        }
+      ])
+    },
     create: {
       timeFormat: '24',
       zeroStartDates: JSON.stringify([
@@ -66,16 +74,6 @@ async function main() {
           id: 'default',
           name: 'Default (2024)',
           date: '2024-01-01'
-        },
-        {
-          id: 'alt-2024',
-          name: 'Alternative 2024',
-          date: '2024-01-06'
-        },
-        {
-          id: 'supervisor-2025',
-          name: 'Supervisor Pattern (2025)',
-          date: '2025-10-13'
         }
       ])
     }
@@ -172,16 +170,16 @@ async function main() {
       defaultEndTime: '01:00',
       contractedDays: JSON.stringify(['monday', 'tuesday', 'wednesday', 'thursday', 'friday'])
     },
-    // Supervisors with 4-on-day/4-off/4-on-night/4-off pattern
+    // Supervisors with 8-day cycle that automatically switches between day and night
     {
       name: 'Martin Smith',
       category: 'SUPERVISOR' as const,
       scheduleType: 'SHIFT_CYCLE' as const,
-      shiftPattern: 'ROTATING_DAY_NIGHT' as const,
+      shiftPattern: 'FIXED' as const,
       daysOn: 4,
       daysOff: 4,
-      shiftOffset: 8, // Offset 8 to be on night shift from 13/10/25 (Day 9 of cycle)
-      zeroStartDateId: 'supervisor-2025',
+      shiftOffset: 8, // Offset 8 to start on night shift
+      zeroStartDateId: 'default',
       defaultStartTime: '08:00',
       defaultEndTime: '20:00',
       contractedDays: JSON.stringify([]) // Empty for shift cycles
@@ -190,11 +188,11 @@ async function main() {
       name: 'Luke Clements',
       category: 'SUPERVISOR' as const,
       scheduleType: 'SHIFT_CYCLE' as const,
-      shiftPattern: 'ROTATING_DAY_NIGHT' as const,
+      shiftPattern: 'FIXED' as const,
       daysOn: 4,
       daysOff: 4,
-      shiftOffset: 0, // Day shift from 13/10/25 (Day 1 of cycle)
-      zeroStartDateId: 'supervisor-2025',
+      shiftOffset: 0, // Offset 0 to start on day shift
+      zeroStartDateId: 'default',
       defaultStartTime: '08:00',
       defaultEndTime: '20:00',
       contractedDays: JSON.stringify([]) // Empty for shift cycles
@@ -203,11 +201,11 @@ async function main() {
       name: 'Martin Fearon',
       category: 'SUPERVISOR' as const,
       scheduleType: 'SHIFT_CYCLE' as const,
-      shiftPattern: 'ROTATING_DAY_NIGHT' as const,
+      shiftPattern: 'FIXED' as const,
       daysOn: 4,
       daysOff: 4,
-      shiftOffset: 12, // Off duty from 13/10/25 (Day 13 of cycle)
-      zeroStartDateId: 'supervisor-2025',
+      shiftOffset: 12, // Offset 12 for different timing
+      zeroStartDateId: 'default',
       defaultStartTime: '08:00',
       defaultEndTime: '20:00',
       contractedDays: JSON.stringify([]) // Empty for shift cycles
@@ -216,11 +214,11 @@ async function main() {
       name: 'Chris Crombie',
       category: 'SUPERVISOR' as const,
       scheduleType: 'SHIFT_CYCLE' as const,
-      shiftPattern: 'ROTATING_DAY_NIGHT' as const,
+      shiftPattern: 'FIXED' as const,
       daysOn: 4,
       daysOff: 4,
-      shiftOffset: 4, // Off duty from 13/10/25 (Day 5 of cycle)
-      zeroStartDateId: 'supervisor-2025',
+      shiftOffset: 4, // Offset 4 for different timing
+      zeroStartDateId: 'default',
       defaultStartTime: '08:00',
       defaultEndTime: '20:00',
       contractedDays: JSON.stringify([]) // Empty for shift cycles

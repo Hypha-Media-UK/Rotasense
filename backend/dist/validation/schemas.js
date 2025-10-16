@@ -47,7 +47,7 @@ function validateShiftTimes(startTime, endTime) {
 exports.staffCategorySchema = zod_1.z.enum(['REGULAR', 'RELIEF', 'SUPERVISOR']);
 exports.overrideTypeSchema = zod_1.z.enum(['TEMPORARY_ALLOCATION', 'ABSENCE']);
 exports.scheduleTypeSchema = zod_1.z.enum(['DAILY', 'SHIFT_CYCLE']);
-exports.shiftPatternSchema = zod_1.z.enum(['FIXED', 'ROTATING_DAY_NIGHT']);
+exports.shiftPatternSchema = zod_1.z.enum(['FIXED']);
 // Common field validations
 exports.positiveIntSchema = zod_1.z.number().int().positive();
 exports.nonEmptyStringSchema = zod_1.z.string().min(1);

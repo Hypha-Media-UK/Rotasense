@@ -12,7 +12,7 @@ import type {
   DayOfWeek,
   CreateOverrideForm
 } from '@/types'
-import { calculateEnhancedShiftStatus, getStaffShiftType, isRotatingSupervisor } from '@/utils/shiftCalculations'
+import { isStaffOnDuty, getStaffShiftType, isRotatingSupervisor } from '@/utils/shiftCalculations'
 
 // Memoization cache for expensive computations
 const staffStatusCache = new Map<string, StaffStatus>()
@@ -97,7 +97,7 @@ export const useHomeStore = defineStore('home', () => {
     if (shiftCalculationCache.has(cacheKey)) {
       return shiftCalculationCache.get(cacheKey)!
     }
-    const result = calculateEnhancedShiftStatus(staff, date, zeroStartDate)
+    const result = isStaffOnDuty(staff, date, zeroStartDate)
     shiftCalculationCache.set(cacheKey, result)
     return result
   }
@@ -246,6 +246,7 @@ export const useHomeStore = defineStore('home', () => {
         })
 
         const activeStaff = assignedStaff.filter(s => s.isActive).length
+        const scheduledStaff = assignedStaff.filter(s => s.isScheduled || s.isActive || s.isOffDuty).length
         const isUnderstaffed = isOperational && activeStaff < department.minStaff
 
         return {
@@ -254,12 +255,13 @@ export const useHomeStore = defineStore('home', () => {
           isOperational,
           isUnderstaffed,
           requiredStaff: department.minStaff,
-          activeStaff
+          activeStaff,
+          scheduledStaff
         }
       })
       .filter(status => {
-        // Only show if operational for this day AND (has active staff OR marked to display)
-        return status.isOperational && (status.activeStaff > 0 || status.department.displayOnHome)
+        // Only show if operational for this day AND (has scheduled staff OR marked to display)
+        return status.isOperational && (status.scheduledStaff > 0 || status.department.displayOnHome)
       })
   })
 
@@ -442,7 +444,7 @@ export const useHomeStore = defineStore('home', () => {
       if (!zeroStartDate) {
         return false
       }
-      return calculateEnhancedShiftStatus(staff, currentDateTime, zeroStartDate) && currentTime < startTime
+      return isStaffOnDuty(staff, currentDateTime, zeroStartDate) && currentTime < startTime
     }
 
     return false

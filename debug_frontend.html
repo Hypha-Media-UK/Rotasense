@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Supervisor Logic</title>
+</head>
+<body>
+    <h1>Supervisor Logic Debug</h1>
+    <div id="results"></div>
+
+    <script>
+        // Test the supervisor logic
+        async function testSupervisorLogic() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Fetch supervisors
+                const response = await fetch('http://localhost:3000/api/staff?category=supervisor');
+                const supervisors = await response.json();
+                
+                // Fetch settings for zero start dates
+                const settingsResponse = await fetch('http://localhost:3000/api/settings');
+                const settings = await settingsResponse.json();
+                
+                results.innerHTML = '<h2>Supervisors Data:</h2>';
+                
+                supervisors.forEach(supervisor => {
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '20px';
+                    div.style.border = '1px solid #ccc';
+                    div.style.padding = '10px';
+                    
+                    const zeroStartDate = settings.zeroStartDates.find(zsd => zsd.id === supervisor.zeroStartDateId);
+                    
+                    div.innerHTML = `
+                        <h3>${supervisor.name}</h3>
+                        <p><strong>Shift Pattern:</strong> ${supervisor.shiftPattern}</p>
+                        <p><strong>Shift Offset:</strong> ${supervisor.shiftOffset}</p>
+                        <p><strong>Zero Start Date ID:</strong> ${supervisor.zeroStartDateId}</p>
+                        <p><strong>Zero Start Date:</strong> ${zeroStartDate ? zeroStartDate.date : 'NOT FOUND'}</p>
+                        <p><strong>Has Allocation:</strong> ${supervisor.staff_allocations.length > 0 ? 'Yes' : 'No'}</p>
+                        ${supervisor.staff_allocations.length > 0 ? 
+                            `<p><strong>Allocated to:</strong> ${supervisor.staff_allocations[0].departments?.name || supervisor.staff_allocations[0].services?.name || 'Unknown'}</p>` 
+                            : ''}
+                    `;
+                    
+                    results.appendChild(div);
+                });
+                
+                // Test the shift calculation
+                const testDate = new Date('2025-10-16');
+                const supervisorZeroDate = new Date('2025-10-13');
+                
+                const testDiv = document.createElement('div');
+                testDiv.innerHTML = '<h2>Shift Calculation Test for 2025-10-16:</h2>';
+                
+                supervisors.filter(s => s.shiftPattern === 'ROTATING_DAY_NIGHT').forEach(supervisor => {
+                    const daysSinceZero = Math.floor(
+                        (testDate.getTime() - supervisorZeroDate.getTime()) / (1000 * 60 * 60 * 24)
+                    );
+                    
+                    const adjustedDays = daysSinceZero + supervisor.shiftOffset;
+                    const megaCycleLength = 16;
+                    const cycleDay = ((adjustedDays % megaCycleLength) + megaCycleLength) % megaCycleLength + 1;
+                    
+                    let isOnDuty, shiftType;
+                    
+                    if (cycleDay <= 4) {
+                        isOnDuty = true;
+                        shiftType = 'day';
+                    } else if (cycleDay <= 8) {
+                        isOnDuty = false;
+                        shiftType = 'day';
+                    } else if (cycleDay <= 12) {
+                        isOnDuty = true;
+                        shiftType = 'night';
+                    } else {
+                        isOnDuty = false;
+                        shiftType = 'night';
+                    }
+                    
+                    const p = document.createElement('p');
+                    p.innerHTML = `<strong>${supervisor.name}:</strong> Cycle Day ${cycleDay}, ${isOnDuty ? 'ON DUTY' : 'OFF DUTY'} (${shiftType})`;
+                    p.style.color = isOnDuty ? 'green' : 'red';
+                    testDiv.appendChild(p);
+                });
+                
+                results.appendChild(testDiv);
+                
+            } catch (error) {
+                results.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run the test when page loads
+        testSupervisorLogic();
+    </script>
+</body>
+</html>

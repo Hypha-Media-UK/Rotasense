@@ -88,8 +88,8 @@ function formatDayName(day: DayOfWeek): string {
 
 function getStaffScheduleDisplay(staff: Staff): string {
   if (staff.scheduleType === 'SHIFT_CYCLE') {
-    if (staff.shiftPattern === 'ROTATING_DAY_NIGHT') {
-      return `${staff.daysOn}/${staff.daysOff} Rotating Day/Night Shifts`
+    if (staff.category === 'SUPERVISOR') {
+      return `${staff.daysOn}/${staff.daysOff} Rotating Day/Night Shifts (Auto-switching every 8 days)`
     } else {
       const shiftType = staff.isNightStaff ? 'Night' : 'Day'
       const offset = staff.shiftOffset || 0
@@ -321,10 +321,10 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 // Watch for category changes to set appropriate defaults
 watch(() => newStaff.value.category, (newCategory) => {
   if (newCategory === 'SUPERVISOR') {
-    // Default supervisors to shift cycle with rotating pattern
+    // Default supervisors to shift cycle with fixed pattern (auto-switching)
     newStaff.value.scheduleType = 'SHIFT_CYCLE'
-    newStaff.value.shiftPattern = 'ROTATING_DAY_NIGHT'
-    newStaff.value.isNightStaff = false // Not relevant for rotating
+    newStaff.value.shiftPattern = 'FIXED'
+    newStaff.value.isNightStaff = false // Not relevant for supervisors (auto-switching)
   } else {
     // Reset to defaults for regular/relief staff
     newStaff.value.shiftPattern = 'FIXED'
@@ -451,13 +451,13 @@ onMounted(() => {
               <h4 class="subsection-title">Supervisor Shift Pattern</h4>
               <div class="form-group">
                 <label class="form-label">Shift Pattern</label>
-                <select v-model="newStaff.shiftPattern" class="form-select" required>
-                  <option value="FIXED">Fixed Day/Night Shift</option>
-                  <option value="ROTATING_DAY_NIGHT">Rotating Day/Night Shifts</option>
+                <select v-model="newStaff.shiftPattern" class="form-select" required disabled>
+                  <option value="FIXED">Auto-Rotating Day/Night Shifts</option>
                 </select>
                 <p class="form-help">
-                  <strong>Fixed:</strong> Works either day shifts OR night shifts only<br>
-                  <strong>Rotating:</strong> Alternates between day and night shifts (4 day → 4 off → 4 night → 4 off)
+                  <strong>Supervisors automatically rotate between day and night shifts every 8 days:</strong><br>
+                  8-day cycle: 4 days on → 4 days off → repeat<br>
+                  Shift type alternates: Day shift cycle → Night shift cycle → Day shift cycle...
                 </p>
               </div>
 
@@ -474,8 +474,8 @@ onMounted(() => {
                 <p class="form-help">Check if this supervisor works night shifts only</p>
               </div>
 
-              <!-- Show rotation info for ROTATING pattern -->
-              <div v-if="newStaff.shiftPattern === 'ROTATING_DAY_NIGHT'" class="rotation-info">
+              <!-- Show rotation info for supervisors -->
+              <div v-if="newStaff.category === 'SUPERVISOR'" class="rotation-info">
                 <div class="info-card">
                   <h5>Rotation Pattern</h5>
                   <div class="pattern-display">

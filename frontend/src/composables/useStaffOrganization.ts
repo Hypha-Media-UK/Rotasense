@@ -1,7 +1,7 @@
 import { computed, type ComputedRef } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { useHomeStore } from '@/stores/home'
-import { calculateSupervisorShiftInfo } from '@/utils/shiftCalculations'
+import { calculateShiftInfo } from '@/utils/shiftCalculations'
 import type { StaffStatus } from '@/types'
 
 export interface OrganizedStaffGroup {
@@ -63,8 +63,6 @@ export function useStaffOrganization(options: UseStaffOrganizationOptions): {
 
       // For supervisors, use enhanced logic to support both day and night display
       if (staffStatus.staff.category === 'SUPERVISOR') {
-        // For rotating supervisors, we need to check individual shift status
-
         // Get zero start date (use default if staff doesn't have one)
         const zeroStartDateId = staffStatus.staff.zeroStartDateId || 'default'
         const zeroStartDates = configStore.settings?.zeroStartDates || []
@@ -72,7 +70,9 @@ export function useStaffOrganization(options: UseStaffOrganizationOptions): {
 
         if (zeroStartDateEntry) {
           const zeroStartDate = new Date(zeroStartDateEntry.date)
-          const supervisorInfo = calculateSupervisorShiftInfo(
+
+          // Handle all supervisors using the unified shift calculation
+          const supervisorInfo = calculateShiftInfo(
             staffStatus.staff,
             homeStore.selectedDate,
             zeroStartDate

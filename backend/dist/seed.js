@@ -55,7 +55,25 @@ async function main() {
     // Create default settings with zero start dates
     await prisma.settings.upsert({
         where: { id: 1 },
-        update: {},
+        update: {
+            zeroStartDates: JSON.stringify([
+                {
+                    id: 'default',
+                    name: 'Default (2024)',
+                    date: '2024-01-01'
+                },
+                {
+                    id: 'alt-2024',
+                    name: 'Alternative 2024',
+                    date: '2024-01-06'
+                },
+                {
+                    id: 'supervisor-2025',
+                    name: 'Supervisor Pattern (2025)',
+                    date: '2025-10-13'
+                }
+            ])
+        },
         create: {
             timeFormat: '24',
             zeroStartDates: JSON.stringify([
@@ -68,6 +86,11 @@ async function main() {
                     id: 'alt-2024',
                     name: 'Alternative 2024',
                     date: '2024-01-06'
+                },
+                {
+                    id: 'supervisor-2025',
+                    name: 'Supervisor Pattern (2025)',
+                    date: '2025-10-13'
                 }
             ])
         }
@@ -94,7 +117,8 @@ async function main() {
                     }
                 },
                 update: {
-                    displayOnHome: i % 3 !== 2
+                    // Show ITU and A+E on homepage (they have supervisors)
+                    displayOnHome: deptName.includes('ITU') || deptName.includes('A+E') || deptName.includes('Emergency') || i % 3 !== 2
                 },
                 create: {
                     name: deptName,
@@ -105,8 +129,8 @@ async function main() {
                     startTime: '08:00',
                     endTime: '20:00',
                     minStaff: 2,
-                    // Default to not showing on home unless it has staff
-                    displayOnHome: false
+                    // Show ITU and A+E on homepage (they have supervisors), others default to false
+                    displayOnHome: deptName.includes('ITU') || deptName.includes('A+E') || deptName.includes('Emergency')
                 }
             });
         }
@@ -156,12 +180,65 @@ async function main() {
             defaultStartTime: '13:00',
             defaultEndTime: '01:00',
             contractedDays: JSON.stringify(['monday', 'tuesday', 'wednesday', 'thursday', 'friday'])
+        },
+        // Supervisors with 8-day cycle that automatically switches between day and night
+        {
+            name: 'Martin Smith',
+            category: 'SUPERVISOR',
+            scheduleType: 'SHIFT_CYCLE',
+            shiftPattern: 'FIXED',
+            daysOn: 4,
+            daysOff: 4,
+            shiftOffset: 8, // Offset 8 to start on night shift
+            zeroStartDateId: 'default',
+            defaultStartTime: '08:00',
+            defaultEndTime: '20:00',
+            contractedDays: JSON.stringify([]) // Empty for shift cycles
+        },
+        {
+            name: 'Luke Clements',
+            category: 'SUPERVISOR',
+            scheduleType: 'SHIFT_CYCLE',
+            shiftPattern: 'FIXED',
+            daysOn: 4,
+            daysOff: 4,
+            shiftOffset: 0, // Offset 0 to start on day shift
+            zeroStartDateId: 'default',
+            defaultStartTime: '08:00',
+            defaultEndTime: '20:00',
+            contractedDays: JSON.stringify([]) // Empty for shift cycles
+        },
+        {
+            name: 'Martin Fearon',
+            category: 'SUPERVISOR',
+            scheduleType: 'SHIFT_CYCLE',
+            shiftPattern: 'FIXED',
+            daysOn: 4,
+            daysOff: 4,
+            shiftOffset: 12, // Offset 12 for different timing
+            zeroStartDateId: 'default',
+            defaultStartTime: '08:00',
+            defaultEndTime: '20:00',
+            contractedDays: JSON.stringify([]) // Empty for shift cycles
+        },
+        {
+            name: 'Chris Crombie',
+            category: 'SUPERVISOR',
+            scheduleType: 'SHIFT_CYCLE',
+            shiftPattern: 'FIXED',
+            daysOn: 4,
+            daysOff: 4,
+            shiftOffset: 4, // Offset 4 for different timing
+            zeroStartDateId: 'default',
+            defaultStartTime: '08:00',
+            defaultEndTime: '20:00',
+            contractedDays: JSON.stringify([]) // Empty for shift cycles
         }
     ];
     for (const staffConfig of staffConfigurations) {
         await prisma.staff.upsert({
             where: { name: staffConfig.name },
-            update: {},
+            update: staffConfig, // Update existing staff with new configuration
             create: staffConfig
         });
     }
@@ -208,10 +285,47 @@ async function main() {
         { staffId: 9, departmentId: 1 }, // Brian Cassidy (4-on/4-off Group A) to AMU
         { staffId: 10, departmentId: 2 }, // Carla Barton (4-on/4-off Group B) to IAU
     ];
+    // Create supervisor allocations using dynamic IDs
+    const staffByName = await prisma.staff.findMany({
+        select: { id: true, name: true }
+    });
+    const getStaffId = (name) => staffByName.find(s => s.name === name)?.id;
+    const departments = await prisma.departments.findMany({
+        select: { id: true, name: true }
+    });
+    const getDeptId = (name) => departments.find(d => d.name === name)?.id;
+    const supervisorAllocations = [
+        { staffId: getStaffId('Martin Smith'), departmentId: getDeptId('ITU') },
+        { staffId: getStaffId('Luke Clements'), departmentId: getDeptId('ITU') },
+        { staffId: getStaffId('Martin Fearon'), departmentId: getDeptId('A+E') },
+        { staffId: getStaffId('Chris Crombie'), departmentId: getDeptId('A+E') },
+    ].filter(allocation => allocation.staffId && allocation.departmentId);
+    // Create regular staff allocations
     for (const allocation of sampleAllocations) {
-        await prisma.staff_allocations.create({
-            data: allocation
-        });
+        try {
+            await prisma.staff_allocations.create({
+                data: allocation
+            });
+        }
+        catch (error) {
+            // Skip if allocation already exists
+            console.log(`Skipping existing allocation: ${JSON.stringify(allocation)}`);
+        }
+    }
+    // Create supervisor allocations
+    for (const allocation of supervisorAllocations) {
+        try {
+            await prisma.staff_allocations.create({
+                data: {
+                    staffId: allocation.staffId,
+                    departmentId: allocation.departmentId
+                }
+            });
+        }
+        catch (error) {
+            // Skip if allocation already exists
+            console.log(`Skipping existing supervisor allocation: ${JSON.stringify(allocation)}`);
+        }
     }
     console.log(`✅ Sample allocations created: ${sampleAllocations.length} allocations`);
     console.log('🎉 Database seed completed successfully!');

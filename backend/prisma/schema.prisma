@@ -86,7 +86,7 @@ model settings {
   timeFormat     String   @default("24")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  zeroStartDates String   @default("[]")
+  zeroStartDates String   @db.Text
 }
 
 model staff {
@@ -185,7 +185,6 @@ enum staff_scheduleType {
 
 enum staff_shiftPattern {
   FIXED
-  ROTATING_DAY_NIGHT
 }
 
 model minimum_staff_periods {
